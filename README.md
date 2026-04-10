@@ -24,7 +24,30 @@ The entire system is built on a single public dataset: [Lending Club Accepted Lo
 streamlit run dashboard/app.py
 ```
 
-The dashboard has 5 tabs — one project overview and one per module — with live prediction inputs for Modules 1 and 2, interactive charts for Modules 3 and 4, and model comparison tables throughout.
+The dashboard has 7 tabs — project overview, four core Lending Club modules, Hackathon Lab, and a dedicated Bank Term Deposit module — with live prediction inputs, scenario tools, and model comparison views.
+
+### Hackathon Lab (new)
+
+The dashboard now also includes a **Hackathon Lab** tab with:
+
+- Scenario and stress testing (rate shock, income shock, DTI shock)
+- Batch portfolio scoring from uploaded CSV
+- Explainability center (global and local feature impact)
+- Drift monitor for core numeric risk features
+- One-click executive report export (Markdown)
+
+If `data/processed/` files are missing, the app automatically switches to synthetic demo data for time-series visuals so the demo remains fully runnable.
+
+### Module 5: Bank Deposit AI (new)
+
+Inspired by bank-term-deposit prediction workflows, the dashboard now includes a dedicated module with:
+
+- Default training dataset loaded from `Zeeshan13/Bank-Term-Deposit-Prediction` (`bank_updated.csv`), then cached locally at `data/external/bank_updated.csv`
+- Feature engineering via binned categories (`age`, `balance`, `duration`)
+- One-hot encoding and class balancing using SMOTE
+- Model comparison across Logistic Regression, Decision Tree, and Random Forest
+- Interactive prediction form with top feature importance visualization
+- Optional LLM campaign advisor (uses OpenAI key if provided, otherwise local fallback strategy text)
 
 ---
 

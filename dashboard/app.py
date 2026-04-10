@@ -2,8 +2,16 @@
 # FinSight: Financial Forecasting System — Streamlit Dashboard
 
 import os
+import sys
 import warnings
 warnings.filterwarnings('ignore')
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
+SRC_DIR = os.path.join(PROJECT_ROOT, "src")
+for path_candidate in (PROJECT_ROOT, SRC_DIR):
+    if path_candidate not in sys.path:
+        sys.path.insert(0, path_candidate)
 
 import streamlit as st
 import pandas as pd
@@ -11,6 +19,28 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import joblib
+
+from hackathon_utils import (
+    apply_stress_scenario,
+    drift_report,
+    generate_demo_grade_data,
+    generate_demo_monthly_data,
+    generate_executive_report_md,
+    generate_synthetic_portfolio,
+    local_feature_impact,
+    model_feature_importance,
+    prepare_features,
+    score_with_models,
+)
+from bank_term_deposit_module import (
+    generate_llm_campaign_advice,
+    generate_synthetic_bank_data,
+    load_bank_dataset,
+    predict_subscription,
+    preprocess_user_input,
+    top_feature_importance,
+    train_bank_models,
+)
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -20,7 +50,7 @@ st.set_page_config(
 )
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = PROJECT_ROOT
 
 def p(path):
     return os.path.join(BASE_DIR, path)
@@ -57,11 +87,24 @@ def load_module3_models():
 
 @st.cache_data
 def load_monthly_data():
-    return pd.read_csv(p('data/processed/monthly_loan_volume.csv'), parse_dates=['month_start'])
+    path = p('data/processed/monthly_loan_volume.csv')
+    if os.path.exists(path):
+        return pd.read_csv(path, parse_dates=['month_start'])
+    return generate_demo_monthly_data()
 
 @st.cache_data
 def load_grade_data():
-    return pd.read_csv(p('data/processed/grade_monthly_demand.csv'), parse_dates=['month_start'])
+    path = p('data/processed/grade_monthly_demand.csv')
+    if os.path.exists(path):
+        return pd.read_csv(path, parse_dates=['month_start'])
+    return generate_demo_grade_data()
+
+
+@st.cache_resource
+def load_bank_term_deposit_defaults():
+    raw_df = load_bank_dataset()
+    artifacts = train_bank_models(raw_df, seed=42)
+    return artifacts, raw_df
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.title("📊 FinSight: Financial Forecasting System")
@@ -69,12 +112,14 @@ st.markdown("*End-to-end ML forecasting on 1.3M Lending Club loan records*")
 st.markdown("---")
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "🏠 Overview",
     "⚠️ Module 1: Loan Default Risk",
     "👤 Module 2: Borrower Churn",
     "📈 Module 3: Loan Volume Forecast",
     "📊 Module 4: Credit Demand by Grade",
+    "🚀 Hackathon Lab",
+    "🏦 Module 5: Bank Deposit AI",
 ])
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -313,6 +358,8 @@ with tab4:
 
     try:
         monthly = load_monthly_data()
+        if not os.path.exists(p('data/processed/monthly_loan_volume.csv')):
+            st.info("Demo mode: `data/processed/monthly_loan_volume.csv` not found, so synthetic monthly data is being used.")
 
         st.subheader("Historical Loan Volume")
         fig, ax = plt.subplots(figsize=(12, 4))
@@ -363,6 +410,8 @@ with tab5:
 
     try:
         grade_monthly = load_grade_data()
+        if not os.path.exists(p('data/processed/grade_monthly_demand.csv')):
+            st.info("Demo mode: `data/processed/grade_monthly_demand.csv` not found, so synthetic grade-demand data is being used.")
 
         st.subheader("Historical Demand by Grade")
 
@@ -395,6 +444,305 @@ with tab5:
 
     st.markdown("---")
     st.info("💡 **Key Insight:** Linear Regression was the champion model for Grade A, B, C, and E. XGBoost only won on Grade D — the highest-risk segment — where demand volatility justified a more complex model.")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 6 — HACKATHON LAB
+# ══════════════════════════════════════════════════════════════════════════════
+with tab6:
+    st.header("🚀 Hackathon Lab")
+    st.markdown("Interactive scenario testing, batch portfolio scoring, explainability, drift monitoring, and executive report export.")
+
+    try:
+        m1 = load_module1_models()
+        m2 = load_module2_models()
+
+        st.subheader("1) Scenario & Stress Testing")
+        base_profile = pd.DataFrame([
+            {
+                'loan_amnt': 12000,
+                'int_rate': 13.0,
+                'installment': 310,
+                'annual_inc': 65000,
+                'dti': 15.0,
+                'delinq_2yrs': 0,
+                'inq_last_6mths': 1,
+                'open_acc': 10,
+                'pub_rec': 0,
+                'revol_util': 48,
+                'total_acc': 24,
+                'emp_length': 5,
+                'grade': 'C',
+                'home_ownership': 'MORTGAGE',
+                'purpose': 'debt_consolidation',
+                'issue_year': 2021,
+                'issue_month': 6,
+            }
+        ])
+
+        s1, s2, s3 = st.columns(3)
+        with s1:
+            rate_bps = st.slider("Rate shock (bps)", 0, 500, 100, step=25)
+        with s2:
+            income_drop = st.slider("Income drop (%)", 0, 40, 10, step=1)
+        with s3:
+            dti_bump = st.slider("DTI increase", 0.0, 15.0, 3.0, step=0.5)
+
+        stressed_profile = apply_stress_scenario(base_profile, rate_bps, income_drop, dti_bump)
+        base_m1 = prepare_features(base_profile, m1['features'])
+        stress_m1 = prepare_features(stressed_profile, m1['features'])
+        base_m2 = prepare_features(base_profile, m2['features'])
+        stress_m2 = prepare_features(stressed_profile, m2['features'])
+
+        base_default = m1['xgb'].predict_proba(base_m1)[0][1]
+        stress_default = m1['xgb'].predict_proba(stress_m1)[0][1]
+        base_churn = m2['xgb'].predict_proba(base_m2)[0][1]
+        stress_churn = m2['xgb'].predict_proba(stress_m2)[0][1]
+
+        c1, c2 = st.columns(2)
+        c1.metric("Default Probability", f"{stress_default:.1%}", delta=f"{(stress_default - base_default):+.1%}")
+        c2.metric("Churn Probability", f"{stress_churn:.1%}", delta=f"{(stress_churn - base_churn):+.1%}")
+
+        st.markdown("---")
+        st.subheader("2) Portfolio Risk Scoring")
+        st.caption("Upload CSV with borrower columns (or use generated demo data).")
+
+        sample_df = generate_synthetic_portfolio(300)
+        sample_csv = sample_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            "Download sample portfolio CSV",
+            data=sample_csv,
+            file_name="sample_portfolio.csv",
+            mime="text/csv",
+            key="download_sample_portfolio"
+        )
+
+        uploaded = st.file_uploader("Upload portfolio CSV", type=["csv"], key="portfolio_upload")
+        portfolio_df = sample_df.copy() if uploaded is None else pd.read_csv(uploaded)
+        scored = score_with_models(portfolio_df, m1, m2)
+
+        k1, k2, k3, k4 = st.columns(4)
+        k1.metric("Records scored", f"{len(scored):,}")
+        k2.metric("Avg default prob", f"{scored['default_probability'].mean():.1%}")
+        k3.metric("Avg churn prob", f"{scored['churn_probability'].mean():.1%}")
+        k4.metric("High risk share", f"{(scored['risk_band'].astype(str) == 'High').mean():.1%}")
+
+        st.dataframe(
+            scored[[
+                'loan_amnt', 'int_rate', 'grade', 'purpose',
+                'default_probability', 'churn_probability', 'risk_score', 'risk_band'
+            ]].head(30),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        scored_csv = scored.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            "Download scored portfolio",
+            data=scored_csv,
+            file_name="scored_portfolio.csv",
+            mime="text/csv",
+            key="download_scored_portfolio"
+        )
+
+        st.markdown("---")
+        st.subheader("3) Explainability Center")
+        m1_input = prepare_features(portfolio_df, m1['features'])
+        importances = model_feature_importance(m1['xgb'], m1['features'])
+        baseline_means = m1_input.mean(numeric_only=True)
+
+        row_idx = st.slider("Choose record index", 0, max(0, len(m1_input) - 1), 0, key="explain_row")
+        local_imp = local_feature_impact(m1_input.iloc[row_idx], baseline_means, importances, top_n=8)
+
+        e1, e2 = st.columns(2)
+        with e1:
+            st.caption("Top global risk drivers")
+            st.bar_chart(importances.head(10).set_index('feature'))
+        with e2:
+            st.caption("Top local drivers for selected record")
+            st.bar_chart(local_imp.set_index('feature')[['impact']])
+
+        st.dataframe(local_imp, use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        st.subheader("4) Drift Monitor")
+        baseline = generate_synthetic_portfolio(len(portfolio_df), seed=11)
+        drift_cols = ['loan_amnt', 'int_rate', 'annual_inc', 'dti', 'revol_util', 'total_acc']
+        current_numeric = prepare_features(portfolio_df, drift_cols)
+        baseline_numeric = prepare_features(baseline, drift_cols)
+        drift_df = drift_report(current_numeric, baseline_numeric, drift_cols)
+
+        if drift_df.empty:
+            st.info("Drift report unavailable: no overlapping numeric features.")
+        else:
+            high_drift_count = int((drift_df['status'] == 'High').sum())
+            if high_drift_count > 0:
+                st.warning(f"⚠️ {high_drift_count} feature(s) show high drift. Consider retraining checks.")
+            else:
+                st.success("✅ No high drift signals detected in monitored features.")
+            st.dataframe(drift_df, use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        st.subheader("5) Executive Report Export")
+        summary = {
+            'avg_default_probability': float(scored['default_probability'].mean()),
+            'avg_churn_probability': float(scored['churn_probability'].mean()),
+            'high_risk_share': float((scored['risk_band'].astype(str) == 'High').mean()),
+            'expected_defaults': float(scored['default_probability'].sum()),
+        }
+        report_md = generate_executive_report_md(summary, drift_df)
+        st.download_button(
+            "Download executive risk brief (Markdown)",
+            data=report_md,
+            file_name="finsight_executive_brief.md",
+            mime="text/markdown",
+            key="download_exec_report"
+        )
+        st.text_area("Report preview", report_md, height=240)
+
+    except Exception as e:
+        st.error(f"Hackathon Lab could not load: {e}")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 7 — BANK TERM DEPOSIT AI (adapted capability)
+# ══════════════════════════════════════════════════════════════════════════════
+with tab7:
+    st.header("🏦 Module 5: Bank Term Deposit Prediction")
+    st.markdown("SMOTE-balanced tri-model classifier (Logistic Regression, Decision Tree, Random Forest) with one-hot encoded campaign features.")
+    st.caption("Default training data source: `Zeeshan13/Bank-Term-Deposit-Prediction` → `bank_updated.csv` (cached locally after first load).")
+    st.caption("The source repository does not include an LLM, so this tab adds an optional LLM campaign advisor as an enhancement.")
+
+    try:
+        default_artifacts, default_raw_df = load_bank_term_deposit_defaults()
+        if "bank_artifacts" not in st.session_state:
+            st.session_state["bank_artifacts"] = default_artifacts
+            st.session_state["bank_raw_df"] = default_raw_df
+
+        artifacts = st.session_state["bank_artifacts"]
+        bank_df = st.session_state["bank_raw_df"]
+
+        st.subheader("Training Data")
+        uploaded_bank = st.file_uploader(
+            "Upload bank marketing CSV with target column `y` (yes/no) to retrain models",
+            type=["csv"],
+            key="bank_module_upload",
+        )
+
+        col_u1, col_u2 = st.columns([2, 1])
+        with col_u1:
+            st.caption(f"Current dataset size: {len(bank_df):,} rows")
+        with col_u2:
+            if st.button("Use synthetic default", key="bank_reset_default"):
+                st.session_state["bank_artifacts"] = default_artifacts
+                st.session_state["bank_raw_df"] = default_raw_df
+                artifacts = default_artifacts
+                bank_df = default_raw_df
+                st.success("Reset to synthetic default dataset.")
+
+        if uploaded_bank is not None and st.button("Retrain models on uploaded data", key="bank_retrain_uploaded"):
+            up_df = pd.read_csv(uploaded_bank)
+            required_cols = {
+                'age', 'job', 'marital', 'education', 'default', 'balance', 'housing', 'loan',
+                'contact', 'month', 'day', 'duration', 'campaign', 'pdays', 'previous', 'poutcome', 'y'
+            }
+            missing = sorted(required_cols - set(up_df.columns))
+            if missing:
+                st.error(f"Uploaded file is missing required columns: {missing}")
+            else:
+                st.session_state["bank_artifacts"] = train_bank_models(up_df)
+                st.session_state["bank_raw_df"] = up_df
+                artifacts = st.session_state["bank_artifacts"]
+                bank_df = up_df
+                st.success("Models retrained on uploaded dataset.")
+
+        st.markdown("---")
+        st.subheader("Model Leaderboard")
+        metrics_df = artifacts.metrics.copy()
+        display_metrics = metrics_df.copy()
+        for col in ["accuracy", "precision", "recall", "f1"]:
+            display_metrics[col] = (display_metrics[col] * 100).round(2).astype(str) + "%"
+        st.dataframe(display_metrics, use_container_width=True, hide_index=True)
+        st.info(f"Champion model: **{artifacts.best_model_name}**")
+
+        st.markdown("---")
+        st.subheader("Interactive Prediction")
+
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            age = st.slider("Age", 18, 80, 36, key="bank_age")
+            balance = st.number_input("Balance", min_value=-5000, max_value=50000, value=1200, step=100, key="bank_balance")
+            duration = st.slider("Call duration (sec)", 30, 3000, 360, key="bank_duration")
+            day = st.slider("Last contact day", 1, 31, 15, key="bank_day")
+            campaign = st.slider("Campaign contacts", 1, 63, 2, key="bank_campaign")
+
+        with c2:
+            pdays = st.slider("Days since previous contact", -1, 900, 40, key="bank_pdays")
+            previous = st.slider("Previous contacts", 0, 50, 1, key="bank_previous")
+            job = st.selectbox("Job", sorted(bank_df['job'].astype(str).unique().tolist()), key="bank_job")
+            marital = st.selectbox("Marital", sorted(bank_df['marital'].astype(str).unique().tolist()), key="bank_marital")
+            education = st.selectbox("Education", sorted(bank_df['education'].astype(str).unique().tolist()), key="bank_education")
+
+        with c3:
+            default = st.selectbox("Credit default", sorted(bank_df['default'].astype(str).unique().tolist()), key="bank_default")
+            housing = st.selectbox("Housing loan", sorted(bank_df['housing'].astype(str).unique().tolist()), key="bank_housing")
+            loan = st.selectbox("Personal loan", sorted(bank_df['loan'].astype(str).unique().tolist()), key="bank_loan")
+            contact = st.selectbox("Contact type", sorted(bank_df['contact'].astype(str).unique().tolist()), key="bank_contact")
+            month = st.selectbox("Last contact month", sorted(bank_df['month'].astype(str).unique().tolist()), key="bank_month")
+            poutcome = st.selectbox("Previous outcome", sorted(bank_df['poutcome'].astype(str).unique().tolist()), key="bank_poutcome")
+
+        model_choice = st.selectbox("Prediction model", artifacts.metrics["model"].tolist(), index=0, key="bank_model_pick")
+        selected_model = artifacts.models[model_choice]
+
+        user_row = {
+            'age': age,
+            'balance': balance,
+            'duration': duration,
+            'job': job,
+            'marital': marital,
+            'education': education,
+            'default': default,
+            'housing': housing,
+            'loan': loan,
+            'contact': contact,
+            'month': month,
+            'day': day,
+            'campaign': campaign,
+            'pdays': pdays,
+            'previous': previous,
+            'poutcome': poutcome,
+        }
+
+        input_features = preprocess_user_input(user_row, artifacts.feature_columns)
+        pred, prob = predict_subscription(selected_model, input_features)
+
+        r1, r2 = st.columns(2)
+        with r1:
+            if pred == 1:
+                st.success(f"Likely to subscribe ✅ ({prob:.1%})")
+            else:
+                st.warning(f"Unlikely to subscribe ⚠️ ({prob:.1%})")
+        with r2:
+            st.metric("Subscription probability", f"{prob:.1%}")
+            st.metric("Model used", model_choice)
+
+        top_features_df = top_feature_importance(selected_model, artifacts.feature_columns, n=8)
+        st.caption("Top feature importances for selected model")
+        st.bar_chart(top_features_df.set_index("feature"))
+        st.dataframe(top_features_df.head(8), use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        st.subheader("Campaign Advisor")
+        api_key = st.text_input("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", type="password", key="bank_llm_key")
+        if st.button("Generate campaign advice", key="bank_llm_advice_btn"):
+            advice = generate_llm_campaign_advice(
+                model_name=model_choice,
+                prediction_prob=prob,
+                top_features=top_features_df,
+                api_key=api_key,
+            )
+            st.markdown(advice)
+
+    except Exception as e:
+        st.error(f"Bank Deposit module could not load: {e}")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("---")
