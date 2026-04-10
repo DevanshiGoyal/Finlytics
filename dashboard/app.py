@@ -55,6 +55,41 @@ st.set_page_config(
     layout="wide"
 )
 
+st.markdown(
+    """
+    <style>
+    [data-testid="stAppViewContainer"] .main .block-container {
+        padding-top: 1.2rem;
+    }
+
+    .finsight-hero {
+        background: linear-gradient(122deg, #0b2545 0%, #133a63 46%, #1c6e8c 100%);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 16px;
+        padding: 1.4rem 1.6rem;
+        box-shadow: 0 12px 28px rgba(11, 37, 69, 0.22);
+    }
+
+    .finsight-hero-title {
+        margin: 0;
+        color: #f7fbff;
+        font-size: 2.55rem;
+        line-height: 1.2;
+        font-weight: 800;
+    }
+
+    .finsight-hero-subtitle {
+        margin: 0.6rem 0 0 0;
+        color: #d7e7f6;
+        font-size: 1.18rem;
+        font-style: italic;
+        line-height: 1.45;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # ── Paths ─────────────────────────────────────────────────────────────────────
 BASE_DIR = PROJECT_ROOT
 
@@ -120,8 +155,15 @@ def load_bank_anomaly_defaults():
     return artifacts, raw_df
 
 # ── Header ────────────────────────────────────────────────────────────────────
-st.title("📊 FinSight: Financial Forecasting System")
-st.markdown("*End-to-end ML forecasting on 1.3M Lending Club loan records*")
+st.markdown(
+    """
+    <div class="finsight-hero">
+        <h1 class="finsight-hero-title">📊 FinSight: Financial Forecasting System</h1>
+        <p class="finsight-hero-subtitle">End-to-end ML forecasting on 1.3M Lending Club loan records</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 st.markdown("---")
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
