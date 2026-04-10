@@ -131,7 +131,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "👤 Module 2: Borrower Churn",
     "📈 Module 3: Loan Volume Forecast",
     "📊 Module 4: Credit Demand by Grade",
-    "🚀 Hackathon Lab",
+    "🚀 Portfolio Intelligence Hub",
     "🏦 Module 5: Bank Deposit AI",
     "🛡️ Module 6: Deposit Anomaly",
 ])
@@ -456,10 +456,10 @@ with tab5:
     st.info("💡 **Key Insight:** Linear Regression was the champion model for Grade A, B, C, and E. XGBoost only won on Grade D — the highest-risk segment — where demand volatility justified a more complex model.")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 6 — HACKATHON LAB
+# TAB 6 — PORTFOLIO INTELLIGENCE HUB
 # ══════════════════════════════════════════════════════════════════════════════
 with tab6:
-    st.header("🚀 Hackathon Lab")
+    st.header("🚀 Portfolio Intelligence Hub")
     st.markdown("Interactive scenario testing, batch portfolio scoring, explainability, drift monitoring, and executive report export.")
 
     try:
@@ -610,7 +610,7 @@ with tab6:
         st.text_area("Report preview", report_md, height=240)
 
     except Exception as e:
-        st.error(f"Hackathon Lab could not load: {e}")
+        st.error(f"Portfolio Intelligence Hub could not load: {e}")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 7 — BANK TERM DEPOSIT AI (adapted capability)
@@ -618,7 +618,6 @@ with tab6:
 with tab7:
     st.header("🏦 Module 5: Bank Term Deposit Prediction")
     st.markdown("SMOTE-balanced tri-model classifier (Logistic Regression, Decision Tree, Random Forest) with one-hot encoded campaign features.")
-    st.caption("Default training data source: `Zeeshan13/Bank-Term-Deposit-Prediction` → `bank_updated.csv` (cached locally after first load).")
 
     try:
         default_artifacts, default_raw_df = load_bank_term_deposit_defaults()
