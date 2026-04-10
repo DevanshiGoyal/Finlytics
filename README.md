@@ -49,6 +49,16 @@ Inspired by bank-term-deposit prediction workflows, the dashboard now includes a
 - Interactive prediction form with top feature importance visualization
 - Optional LLM campaign advisor (uses OpenAI key if provided, otherwise local fallback strategy text)
 
+### Module 6: Deposit Anomaly Detection (new)
+
+Inspired by `Taliaovescoding/bank-anomaly-system`, the dashboard now includes a hybrid unsupervised anomaly module with:
+
+- Default dataset loaded from `synthetic_deposits.csv` in the source repo (cached locally at `data/external/synthetic_deposits.csv`)
+- Isolation Forest outlier detector (`contamination` configurable)
+- Neural reconstruction model using `MLPRegressor` as a lightweight autoencoder proxy
+- Unified anomaly score, explainable reasons (e.g., unusual hour / high frequency), and live risk trend chart
+- Batch scoring upload + downloadable scored outputs for audit workflows
+
 ---
 
 ## Results

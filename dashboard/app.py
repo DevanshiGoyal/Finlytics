@@ -41,6 +41,12 @@ from bank_term_deposit_module import (
     top_feature_importance,
     train_bank_models,
 )
+from bank_anomaly_module import (
+    analyze_transaction,
+    load_anomaly_dataset,
+    score_transactions,
+    train_anomaly_engine,
+)
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -106,13 +112,20 @@ def load_bank_term_deposit_defaults():
     artifacts = train_bank_models(raw_df, seed=42)
     return artifacts, raw_df
 
+
+@st.cache_resource
+def load_bank_anomaly_defaults():
+    raw_df = load_anomaly_dataset()
+    artifacts = train_anomaly_engine(raw_df, contamination=0.03, random_state=42)
+    return artifacts, raw_df
+
 # ── Header ────────────────────────────────────────────────────────────────────
 st.title("📊 FinSight: Financial Forecasting System")
 st.markdown("*End-to-end ML forecasting on 1.3M Lending Club loan records*")
 st.markdown("---")
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "🏠 Overview",
     "⚠️ Module 1: Loan Default Risk",
     "👤 Module 2: Borrower Churn",
@@ -120,6 +133,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "📊 Module 4: Credit Demand by Grade",
     "🚀 Hackathon Lab",
     "🏦 Module 5: Bank Deposit AI",
+    "🛡️ Module 6: Deposit Anomaly",
 ])
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -731,7 +745,7 @@ with tab7:
 
         st.markdown("---")
         st.subheader("Campaign Advisor")
-        api_key = st.text_input("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", type="password", key="bank_llm_key")
+        api_key = st.text_input("OpenAI API key (optional)", type="password", key="bank_llm_key")
         if st.button("Generate campaign advice", key="bank_llm_advice_btn"):
             advice = generate_llm_campaign_advice(
                 model_name=model_choice,
@@ -743,6 +757,132 @@ with tab7:
 
     except Exception as e:
         st.error(f"Bank Deposit module could not load: {e}")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 8 — DEPOSIT ANOMALY DETECTION (Bank Sentinel style)
+# ══════════════════════════════════════════════════════════════════════════════
+with tab8:
+    st.header("🛡️ Module 6: Unusual Deposit Detection")
+    st.markdown("Hybrid anomaly engine using **Isolation Forest** + **MLP reconstruction error** on deposit behavior features.")
+    try:
+        default_anomaly_artifacts, default_anomaly_df = load_bank_anomaly_defaults()
+        if "anomaly_artifacts" not in st.session_state:
+            st.session_state["anomaly_artifacts"] = default_anomaly_artifacts
+            st.session_state["anomaly_raw_df"] = default_anomaly_df
+            st.session_state["anomaly_history"] = []
+
+        anomaly_artifacts = st.session_state["anomaly_artifacts"]
+        anomaly_df = st.session_state["anomaly_raw_df"]
+
+        st.subheader("Model Setup")
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Training rows", f"{len(anomaly_df):,}")
+        m2.metric("Contamination", f"{anomaly_artifacts.contamination:.1%}")
+        m3.metric("Recon threshold", f"{anomaly_artifacts.reconstruction_threshold:.3f}")
+
+        with st.expander("Retrain anomaly engine"):
+            uploaded_anomaly = st.file_uploader(
+                "Upload CSV with columns: amount, hour, day_of_week, frequency",
+                type=["csv"],
+                key="anomaly_upload",
+            )
+            contam = st.slider("IsolationForest contamination (%)", 1, 10, 3, step=1, key="anomaly_contam")
+            if uploaded_anomaly is not None and st.button("Retrain anomaly models", key="anomaly_retrain_btn"):
+                up_df = pd.read_csv(uploaded_anomaly)
+                required = {"amount", "hour", "day_of_week", "frequency"}
+                missing = sorted(required - set(up_df.columns))
+                if missing:
+                    st.error(f"Uploaded file missing required columns: {missing}")
+                else:
+                    st.session_state["anomaly_raw_df"] = up_df
+                    st.session_state["anomaly_artifacts"] = train_anomaly_engine(
+                        up_df,
+                        contamination=contam / 100.0,
+                        random_state=42,
+                    )
+                    anomaly_artifacts = st.session_state["anomaly_artifacts"]
+                    anomaly_df = up_df
+                    st.success("Anomaly engine retrained successfully.")
+
+        st.markdown("---")
+        st.subheader("Live Deposit Analysis")
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            amount = st.number_input("Deposit Amount ($)", min_value=1.0, value=500.0, step=50.0, key="anom_amount")
+        with c2:
+            hour = st.slider("Hour of Day", 0, 23, 10, key="anom_hour")
+        with c3:
+            day_of_week = st.slider("Day of Week (0=Mon)", 0, 6, 2, key="anom_day")
+        with c4:
+            frequency = st.slider("24h Deposit Frequency", 1, 20, 1, key="anom_freq")
+
+        if st.button("Execute AI Scan", key="anomaly_scan_btn"):
+            result = analyze_transaction(
+                artifacts=anomaly_artifacts,
+                amount=amount,
+                hour=hour,
+                day_of_week=day_of_week,
+                frequency=frequency,
+            )
+            status = "Flagged" if result["is_anomaly"] else "Normal"
+            row = {
+                "amount": amount,
+                "hour": hour,
+                "day_of_week": day_of_week,
+                "frequency": frequency,
+                "status": status,
+                "score": float(result["score"]),
+                "reasons": result["reasons"],
+                "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            st.session_state["anomaly_history"].append(row)
+
+        history = pd.DataFrame(st.session_state.get("anomaly_history", []))
+        if not history.empty:
+            latest = history.iloc[-1]
+            rr1, rr2 = st.columns(2)
+            with rr1:
+                if latest["status"] == "Flagged":
+                    st.error(f"⚠️ SUSPICIOUS ACTIVITY | Score: {latest['score']:.3f}")
+                else:
+                    st.success(f"✅ CLEARED | Score: {latest['score']:.3f}")
+                st.caption(f"Reasons: {latest['reasons']}")
+            with rr2:
+                st.metric("Current risk score", f"{latest['score']:.3f}")
+                st.metric("Risk level", latest["status"])
+
+            st.line_chart(history.set_index("timestamp")[["score"]])
+            st.dataframe(
+                history[["timestamp", "amount", "hour", "day_of_week", "frequency", "status", "score", "reasons"]].sort_values("timestamp", ascending=False),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+        st.markdown("---")
+        st.subheader("Batch Scoring")
+        st.caption("Upload transaction batches with columns: amount, hour, day_of_week, frequency")
+        batch_file = st.file_uploader("Upload anomaly batch CSV", type=["csv"], key="anomaly_batch_upload")
+        if batch_file is not None:
+            batch_df = pd.read_csv(batch_file)
+            required = {"amount", "hour", "day_of_week", "frequency"}
+            missing = sorted(required - set(batch_df.columns))
+            if missing:
+                st.error(f"Batch file missing required columns: {missing}")
+            else:
+                scored_batch = score_transactions(batch_df, anomaly_artifacts)
+                flagged_share = float(scored_batch["is_anomaly"].mean())
+                st.metric("Flagged share", f"{flagged_share:.1%}")
+                st.dataframe(scored_batch.head(50), use_container_width=True, hide_index=True)
+                st.download_button(
+                    "Download scored anomaly batch",
+                    data=scored_batch.to_csv(index=False).encode("utf-8"),
+                    file_name="scored_anomaly_batch.csv",
+                    mime="text/csv",
+                    key="download_scored_anomaly_batch",
+                )
+
+    except Exception as e:
+        st.error(f"Anomaly module could not load: {e}")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("---")
