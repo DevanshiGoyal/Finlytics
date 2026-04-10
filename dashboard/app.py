@@ -62,6 +62,49 @@ st.markdown(
         padding-top: 1.2rem;
     }
 
+    .stTabs [data-baseweb="tab-list"] {
+        background: linear-gradient(180deg, #eef3f9 0%, #e7edf6 100%);
+        border: 1px solid #d2dceb;
+        border-radius: 12px;
+        padding: 0.32rem;
+        gap: 0.28rem;
+        overflow-x: auto;
+        scrollbar-width: thin;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 9px;
+        padding: 0.48rem 0.88rem;
+        min-height: 42px;
+        color: #263547;
+        font-weight: 700;
+        transition: all 0.2s ease;
+    }
+
+    .stTabs [data-baseweb="tab"] p {
+        font-size: 1.05rem;
+        line-height: 1.2;
+        white-space: nowrap;
+        font-weight: 700;
+    }
+
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: #0f2e53;
+        border-color: #0f2e53;
+        color: #f6fbff;
+        box-shadow: 0 4px 12px rgba(15, 46, 83, 0.25);
+    }
+
+    .stTabs [data-baseweb="tab"][aria-selected="true"] p {
+        color: #f6fbff;
+    }
+
+    .stTabs [data-baseweb="tab-highlight"] {
+        background: transparent;
+    }
+
     .finsight-hero {
         background: linear-gradient(122deg, #0b2545 0%, #133a63 46%, #1c6e8c 100%);
         border: 1px solid rgba(255, 255, 255, 0.18);
