@@ -372,8 +372,6 @@ with tab4:
 
     try:
         monthly = load_monthly_data()
-        if not os.path.exists(p('data/processed/monthly_loan_volume.csv')):
-            st.info("Demo mode: `data/processed/monthly_loan_volume.csv` not found, so synthetic monthly data is being used.")
 
         st.subheader("Historical Loan Volume")
         fig, ax = plt.subplots(figsize=(12, 4))
@@ -424,8 +422,6 @@ with tab5:
 
     try:
         grade_monthly = load_grade_data()
-        if not os.path.exists(p('data/processed/grade_monthly_demand.csv')):
-            st.info("Demo mode: `data/processed/grade_monthly_demand.csv` not found, so synthetic grade-demand data is being used.")
 
         st.subheader("Historical Demand by Grade")
 
@@ -623,7 +619,6 @@ with tab7:
     st.header("🏦 Module 5: Bank Term Deposit Prediction")
     st.markdown("SMOTE-balanced tri-model classifier (Logistic Regression, Decision Tree, Random Forest) with one-hot encoded campaign features.")
     st.caption("Default training data source: `Zeeshan13/Bank-Term-Deposit-Prediction` → `bank_updated.csv` (cached locally after first load).")
-    st.caption("The source repository does not include an LLM, so this tab adds an optional LLM campaign advisor as an enhancement.")
 
     try:
         default_artifacts, default_raw_df = load_bank_term_deposit_defaults()
@@ -744,16 +739,14 @@ with tab7:
         st.dataframe(top_features_df.head(8), use_container_width=True, hide_index=True)
 
         st.markdown("---")
-        st.subheader("Campaign Advisor")
-        api_key = st.text_input("OpenAI API key (optional)", type="password", key="bank_llm_key")
-        if st.button("Generate campaign advice", key="bank_llm_advice_btn"):
-            advice = generate_llm_campaign_advice(
-                model_name=model_choice,
-                prediction_prob=prob,
-                top_features=top_features_df,
-                api_key=api_key,
-            )
-            st.markdown(advice)
+        st.subheader("Campaign Suggestion")
+        suggestion = generate_llm_campaign_advice(
+            model_name=model_choice,
+            prediction_prob=prob,
+            top_features=top_features_df,
+            api_key=os.getenv("OPENAI_API_KEY", ""),
+        )
+        st.markdown(suggestion)
 
     except Exception as e:
         st.error(f"Bank Deposit module could not load: {e}")
@@ -884,12 +877,3 @@ with tab8:
     except Exception as e:
         st.error(f"Anomaly module could not load: {e}")
 
-# ── Footer ────────────────────────────────────────────────────────────────────
-st.markdown("---")
-st.markdown(
-    "<div style='text-align: center; color: grey;'>"
-    "FinSight Financial Forecasting System | Built with Lending Club Data | "
-    "<a href='https://github.com/Adrian0117/finsight-forecasting'>GitHub</a>"
-    "</div>",
-    unsafe_allow_html=True
-)
