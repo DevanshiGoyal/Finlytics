@@ -534,6 +534,49 @@ with tab5:
             st.pyplot(fig)
             plt.close()
 
+            st.markdown("#### Historical Demand Heatmaps by Grade")
+            month_labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+            heatmap_cols = st.columns(2)
+
+            for idx, grade in enumerate(selected_grades):
+                with heatmap_cols[idx % 2]:
+                    gdf = grade_monthly[grade_monthly['grade'] == grade].copy()
+                    if gdf.empty:
+                        st.info(f"No historical demand data available for Grade {grade}.")
+                        continue
+
+                    gdf['year'] = pd.to_datetime(gdf['month_start']).dt.year
+                    gdf['month'] = pd.to_datetime(gdf['month_start']).dt.month
+                    heatmap_df = (
+                        gdf.pivot_table(
+                            index='year',
+                            columns='month',
+                            values='funded_amnt_m',
+                            aggfunc='mean',
+                        )
+                        .reindex(columns=range(1, 13))
+                        .sort_index()
+                    )
+
+                    fig_hm, ax_hm = plt.subplots(figsize=(7.2, 3.6))
+                    hm_values = heatmap_df.fillna(0).values
+                    im = ax_hm.imshow(hm_values, aspect='auto', cmap='YlGnBu')
+
+                    ax_hm.set_title(f'Grade {grade} Monthly Demand Heatmap', fontsize=11)
+                    ax_hm.set_xlabel('Month')
+                    ax_hm.set_ylabel('Year')
+                    ax_hm.set_xticks(np.arange(12))
+                    ax_hm.set_xticklabels(month_labels, fontsize=8)
+                    ax_hm.set_yticks(np.arange(len(heatmap_df.index)))
+                    ax_hm.set_yticklabels(heatmap_df.index.astype(str), fontsize=8)
+
+                    cbar = fig_hm.colorbar(im, ax=ax_hm, fraction=0.046, pad=0.04)
+                    cbar.set_label('Funded Amount (USD M)', fontsize=8)
+
+                    plt.tight_layout()
+                    st.pyplot(fig_hm)
+                    plt.close(fig_hm)
+
     except Exception as e:
         st.warning(f"Could not load grade data: {e}")
 
