@@ -1,1 +1,1 @@
-"""FinSight source package."""
+"""Finlytics source package."""

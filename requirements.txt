@@ -1,4 +1,4 @@
-# FinSight: Financial Forecasting System
+# Finlytics: Financial Predictive Analytics
 # Python 3.10+
 # Install: pip install -r requirements.txt
 

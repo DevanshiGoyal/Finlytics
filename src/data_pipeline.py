@@ -1,5 +1,5 @@
 # src/data_pipeline.py
-# FinSight: Financial Forecasting System
+# Finlytics: Financial Forecasting System
 # Step 1: Load, clean, and save the Lending Club dataset for all 4 modules
 
 import pandas as pd

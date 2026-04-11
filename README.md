@@ -1,4 +1,4 @@
-﻿# FinSight - Financial Predictive Analytics Platform
+﻿# Finlytics - Financial Predictive Analytics
 
 <p align="center">
   <strong>From raw banking data to decision-ready AI insights in one Streamlit experience.</strong>
@@ -15,7 +15,7 @@
 
 ## 1. Overview
 
-Imagine a small lending company where one person checks default risk in Excel, another tracks churn in a notebook, and another watches suspicious deposits in a separate tool. Every decision is slow because information is scattered. FinSight solves this simple problem: **bring all key financial decisions into one easy dashboard** so teams can act faster and with more confidence. People use it because it saves time, reduces guesswork, and turns raw model outputs into clear actions they can understand—even if they are not ML experts.
+Imagine a small lending company where one person checks default risk in Excel, another tracks churn in a notebook, and another watches suspicious deposits in a separate tool. Every decision is slow because information is scattered. Finlytics solves this simple problem: **bring all key financial decisions into one easy dashboard** so teams can act faster and with more confidence. People use it because it saves time, reduces guesswork, and turns raw model outputs into clear actions they can understand—even if they are not ML experts.
 
 ---
 
@@ -214,7 +214,7 @@ Imagine a small fintech team with three people:
 - **Arjun** (Marketing Lead)
 - **Sara** (Operations Manager)
 
-They open FinSight every morning. Here is how each tab helps them in real life:
+They open Finlytics every morning. Here is how each tab helps them in real life:
 
 1. **Loan Default Risk**
 
@@ -258,7 +258,7 @@ They open FinSight every morning. Here is how each tab helps them in real life:
 - If flagged, the team can review quickly before losses grow.
 - In simple words: this tab answers, **"Does this transaction look unusual or potentially risky?"**
 
-This story-based flow is exactly why FinSight is useful: each tab solves one practical decision, and together they give a full business control center.
+This story-based flow is exactly why Finlytics is useful: each tab solves one practical decision, and together they give a full business control center.
 
 ---
 

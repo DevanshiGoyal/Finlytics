@@ -1,5 +1,5 @@
 # dashboard/app.py
-# FinSight: Financial Forecasting System — Streamlit Dashboard
+# Finlytics: Financial Predictive Analytics — Streamlit Dashboard
 
 import os
 import sys
@@ -50,7 +50,7 @@ from bank_anomaly_module import (
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="FinSight Dashboard",
+    page_title="Finlytics Dashboard",
     page_icon="📊",
     layout="wide"
 )
@@ -105,7 +105,7 @@ st.markdown(
         background: transparent;
     }
 
-    .finsight-hero {
+    .finlytics-hero {
         background: linear-gradient(122deg, #0b2545 0%, #133a63 46%, #1c6e8c 100%);
         border: 1px solid rgba(255, 255, 255, 0.18);
         border-radius: 16px;
@@ -113,7 +113,7 @@ st.markdown(
         box-shadow: 0 12px 28px rgba(11, 37, 69, 0.22);
     }
 
-    .finsight-hero-title {
+    .finlytics-hero-title {
         margin: 0;
         color: #f7fbff;
         font-size: 2.55rem;
@@ -121,7 +121,7 @@ st.markdown(
         font-weight: 800;
     }
 
-    .finsight-hero-subtitle {
+    .finlytics-hero-subtitle {
         margin: 0.6rem 0 0 0;
         color: #d7e7f6;
         font-size: 1.18rem;
@@ -200,9 +200,9 @@ def load_bank_anomaly_defaults():
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown(
     """
-    <div class="finsight-hero">
-        <h1 class="finsight-hero-title"> FinSight: Financial Forecasting System</h1>
-        <p class="finsight-hero-subtitle">End-to-end ML forecasting on 1.3M Lending Club loan records</p>
+    <div class="finlytics-hero">
+        <h1 class="finlytics-hero-title"> Finlytics: Financial Predictive Analytics</h1>
+        <p class="finlytics-hero-subtitle">End-to-end ML forecasting on 1.3M Lending Club loan records</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -699,7 +699,7 @@ with tab5:
         st.download_button(
             "Download executive risk brief (Markdown)",
             data=report_md,
-            file_name="finsight_executive_brief.md",
+            file_name="finlytics_executive_brief.md",
             mime="text/markdown",
             key="download_exec_report"
         )

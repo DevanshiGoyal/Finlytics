@@ -220,7 +220,7 @@ def generate_executive_report_md(summary: Dict[str, float], drift: pd.DataFrame)
     high_drift = 0 if drift.empty else int((drift["status"] == "High").sum())
     top_drift = "N/A" if drift.empty else ", ".join(drift.head(3)["feature"].tolist())
 
-    return f"""# FinSight Executive Risk Brief
+    return f"""# Finlytics Executive Risk Brief
 
 Generated: {now}
 
@@ -243,6 +243,4 @@ Generated: {now}
 3. Review feature engineering for high-drift variables before retraining.
 
 ---
-
-Prepared by FinSight Hackathon Lab
 """

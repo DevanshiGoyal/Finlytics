@@ -1,4 +1,4 @@
-# FinSight — Model Comparison Report
+# Finlytics — Model Comparison Report
 
 > Full technical record of model selection, evaluation, and design decisions across all four forecasting modules.
 
