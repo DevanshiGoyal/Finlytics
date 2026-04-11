@@ -294,29 +294,30 @@ This story-based flow is exactly why FinSight is useful: each tab solves one pra
 
 ## 6. Visual Evidence (Model Outputs)
 
-### Default Risk Diagnostics
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <strong>Default Risk Diagnostics</strong><br />
+      <img src="reports/module1_roc_curve.png" alt="Module 1 ROC" width="420" />
+    </td>
+    <td align="center" width="50%">
+      <strong>Churn Diagnostics</strong><br />
+      <img src="reports/module2_roc_curve.png" alt="Module 2 ROC" width="420" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <strong>Forecasting Results</strong><br />
+      <img src="reports/module3_forecast.png" alt="Module 3 Forecast" width="420" />
+    </td>
+    <td align="center" width="50%">
+      <strong>Grade Demand Results</strong><br />
+      <img src="reports/module4_forecast_by_grade.png" alt="Module 4 Forecast By Grade" width="420" />
+    </td>
+  </tr>
+</table>
 
-<img src="reports/module1_roc_curve.png" alt="Module 1 ROC" width="700" />
-<img src="reports/module1_confusion_matrix.png" alt="Module 1 Confusion Matrix" width="700" />
-<img src="reports/module1_shap.png" alt="Module 1 SHAP" width="700" />
-
-### Churn Diagnostics
-
-<img src="reports/module2_roc_curve.png" alt="Module 2 ROC" width="700" />
-<img src="reports/module2_confusion_matrix.png" alt="Module 2 Confusion Matrix" width="700" />
-<img src="reports/module2_feature_importance.png" alt="Module 2 Feature Importance" width="700" />
-
-### Forecasting Results
-
-<img src="reports/module3_time_series.png" alt="Module 3 Time Series" width="700" />
-<img src="reports/module3_forecast.png" alt="Module 3 Forecast" width="700" />
-<img src="reports/module3_prophet_components.png" alt="Module 3 Prophet Components" width="700" />
-
-### Grade Demand Results
-
-<img src="reports/module4_demand_by_grade.png" alt="Module 4 Demand By Grade" width="700" />
-<img src="reports/module4_forecast_by_grade.png" alt="Module 4 Forecast By Grade" width="700" />
-<img src="reports/module4_mape_heatmap.png" alt="Module 4 MAPE Heatmap" width="700" />
+Full diagnostic plots are available in the `reports/` folder.
 
 ---
 
