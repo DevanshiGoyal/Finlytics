@@ -201,7 +201,7 @@ def load_bank_anomaly_defaults():
 st.markdown(
     """
     <div class="finsight-hero">
-        <h1 class="finsight-hero-title">📊 FinSight: Financial Forecasting System</h1>
+        <h1 class="finsight-hero-title"> FinSight: Financial Forecasting System</h1>
         <p class="finsight-hero-subtitle">End-to-end ML forecasting on 1.3M Lending Club loan records</p>
     </div>
     """,
@@ -210,53 +210,21 @@ st.markdown(
 st.markdown("---")
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
-    "🏠 Overview",
-    "⚠️ Module 1: Loan Default Risk",
-    "👤 Module 2: Borrower Churn",
-    "📈 Module 3: Loan Volume Forecast",
-    "📊 Module 4: Credit Demand by Grade",
-    "🚀 Portfolio Intelligence Hub",
-    "🏦 Module 5: Bank Deposit AI",
-    "🛡️ Module 6: Deposit Anomaly",
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    "Loan Default Risk",
+    "Borrower Churn",
+    "Loan Volume Forecast",
+    "Credit Demand by Grade",
+    "Portfolio Intelligence Hub",
+    "Bank Deposit AI",
+    "Deposit Anomaly",
 ])
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 1 — OVERVIEW
+# TAB 1 — MODULE 1: LOAN DEFAULT RISK
 # ══════════════════════════════════════════════════════════════════════════════
 with tab1:
-    st.header("Project Overview")
-
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Dataset", "1.34M loans")
-    col2.metric("Features", "96 columns")
-    col3.metric("Modules", "4")
-    col4.metric("Models compared", "3 per module")
-
-    st.markdown("---")
-
-    st.subheader("Module Results Summary")
-    summary = pd.DataFrame({
-        'Module':        ['Loan Default Risk', 'Borrower Churn', 'Loan Volume Forecast', 'Credit Demand (Grade A)'],
-        'Task':          ['Binary Classification', 'Binary Classification', 'Time Series Regression', 'Time Series Regression'],
-        'Best Model':    ['XGBoost', 'XGBoost', 'Linear Regression', 'Linear Regression'],
-        'Best Metric':   ['AUC 0.717', 'AUC 0.814', 'MAPE 1.92%', 'MAPE 2.72%'],
-    })
-    st.dataframe(summary, use_container_width=True, hide_index=True)
-
-    st.markdown("---")
-    st.subheader("Tech Stack")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.markdown("**Data**\n- Pandas\n- NumPy")
-    col2.markdown("**ML Models**\n- Scikit-learn\n- XGBoost")
-    col3.markdown("**Forecasting**\n- Prophet\n- Lag features")
-    col4.markdown("**Explainability**\n- Feature importance\n- Threshold tuning")
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 2 — MODULE 1: LOAN DEFAULT RISK
-# ══════════════════════════════════════════════════════════════════════════════
-with tab2:
-    st.header("⚠️ Module 1: Loan Default Risk Prediction")
+    st.header(" Loan Default Risk Prediction")
     st.markdown("Predict whether a borrower will default on their loan.")
 
     try:
@@ -350,10 +318,10 @@ with tab2:
         st.error(f"Error loading Module 1 models: {e}")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 3 — MODULE 2: BORROWER CHURN
+# TAB 2 — MODULE 2: BORROWER CHURN
 # ══════════════════════════════════════════════════════════════════════════════
-with tab3:
-    st.header("👤 Module 2: Borrower Churn Prediction")
+with tab2:
+    st.header(" Borrower Churn Prediction")
     st.markdown("Predict whether a borrower will return for a second loan after repayment.")
 
     try:
@@ -441,10 +409,10 @@ with tab3:
         st.error(f"Error loading Module 2 models: {e}")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 4 — MODULE 3: LOAN VOLUME FORECAST
+# TAB 3 — MODULE 3: LOAN VOLUME FORECAST
 # ══════════════════════════════════════════════════════════════════════════════
-with tab4:
-    st.header("📈 Module 3: Loan Volume Forecast")
+with tab3:
+    st.header("Loan Volume Forecast")
     st.markdown("Forecast monthly total loan volume funded by Lending Club.")
 
     st.subheader("Model Performance (Test period: 2015)")
@@ -486,10 +454,10 @@ with tab4:
     st.info("💡 **Key Insight:** Linear Regression outperformed XGBoost and Prophet during the stable growth period (2008–2015), demonstrating that model complexity should be justified by data complexity.")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 5 — MODULE 4: CREDIT DEMAND BY GRADE
+# TAB 4 — MODULE 4: CREDIT DEMAND BY GRADE
 # ══════════════════════════════════════════════════════════════════════════════
-with tab5:
-    st.header("📊 Module 4: Credit Demand Forecast by Grade")
+with tab4:
+    st.header("Credit Demand Forecast by Grade")
     st.markdown("Forecast monthly loan demand segmented by credit grade (A–E).")
 
     st.subheader("Model Performance — MAPE (%) by Grade")
@@ -584,10 +552,10 @@ with tab5:
     st.info("💡 **Key Insight:** Linear Regression was the champion model for Grade A, B, C, and E. XGBoost only won on Grade D — the highest-risk segment — where demand volatility justified a more complex model.")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 6 — PORTFOLIO INTELLIGENCE HUB
+# TAB 5 — PORTFOLIO INTELLIGENCE HUB
 # ══════════════════════════════════════════════════════════════════════════════
-with tab6:
-    st.header("🚀 Portfolio Intelligence Hub")
+with tab5:
+    st.header("Portfolio Intelligence Hub")
     st.markdown("Interactive scenario testing, batch portfolio scoring, explainability, drift monitoring, and executive report export.")
 
     try:
@@ -741,10 +709,10 @@ with tab6:
         st.error(f"Portfolio Intelligence Hub could not load: {e}")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 7 — BANK TERM DEPOSIT AI (adapted capability)
+# TAB 6 — BANK TERM DEPOSIT AI (adapted capability)
 # ══════════════════════════════════════════════════════════════════════════════
-with tab7:
-    st.header("🏦 Module 5: Bank Term Deposit Prediction")
+with tab6:
+    st.header("Bank Term Deposit Prediction")
     st.markdown("SMOTE-balanced tri-model classifier (Logistic Regression, Decision Tree, Random Forest) with one-hot encoded campaign features.")
 
     try:
@@ -879,10 +847,10 @@ with tab7:
         st.error(f"Bank Deposit module could not load: {e}")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 8 — DEPOSIT ANOMALY DETECTION (Bank Sentinel style)
+# TAB 7 — DEPOSIT ANOMALY DETECTION (Bank Sentinel style)
 # ══════════════════════════════════════════════════════════════════════════════
-with tab8:
-    st.header("🛡️ Module 6: Unusual Deposit Detection")
+with tab7:
+    st.header("Unusual Deposit Detection")
     st.markdown("Hybrid anomaly engine using **Isolation Forest** + **MLP reconstruction error** on deposit behavior features.")
     try:
         default_anomaly_artifacts, default_anomaly_df = load_bank_anomaly_defaults()

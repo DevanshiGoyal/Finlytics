@@ -10,10 +10,10 @@ numpy==1.26.4
 scikit-learn==1.4.0
 xgboost==2.0.3
 
-# ── Imbalanced data (SMOTE — Module 1) ───────────────────────────────────────
+# ── Imbalanced data  ───────────────────────────────────────
 imbalanced-learn==0.12.0
 
-# ── Time series forecasting (Module 3) ───────────────────────────────────────
+# ── Time series forecasting ───────────────────────────────────────
 prophet==1.1.5
 
 # ── Visualisation ─────────────────────────────────────────────────────────────
