@@ -31,9 +31,14 @@ Imagine a small lending company where one person checks default risk in Excel, a
 
 ## 3. Architecture (Hackathon Flow)
 
-<p align="center">
-  <img src="reports/architecture_hackathon_flow.svg" alt="FinSight architecture flow" width="700" />
-</p>
+```mermaid
+flowchart TD
+    A[Input Data - Bank and Lending] --> B[1. Prediction Engine]
+    B --> C[2. Forecasting Layer]
+    C --> D[3. Anomaly Detection]
+    D --> E[4. Explainability and AI Insights]
+    E --> F[5. Streamlit Dashboard]
+```
 
 ### Runtime Architecture
 
