@@ -21,8 +21,16 @@ import matplotlib.dates as mdates
 import joblib
 
 from hackathon_utils import (
+    anomaly_root_cause_hint,
     apply_stress_scenario,
+    baseline_backtest,
+    compute_baseline_forecasts,
+    detect_recent_anomalies,
     drift_report,
+    forecast_confidence_label,
+    forecast_qa_snapshot,
+    generate_forecast_brief_md,
+    forecast_with_uncertainty,
     generate_demo_grade_data,
     generate_demo_monthly_data,
     generate_executive_report_md,
@@ -30,7 +38,10 @@ from hackathon_utils import (
     local_feature_impact,
     model_feature_importance,
     prepare_features,
+    recommend_next_action,
+    rolling_backtest,
     score_with_models,
+    scenario_forecast,
 )
 from bank_term_deposit_module import (
     generate_llm_campaign_advice,
@@ -128,6 +139,30 @@ st.markdown(
         font-style: italic;
         line-height: 1.45;
     }
+
+    .finsight-guide {
+        background: linear-gradient(180deg, #f8fbff 0%, #f2f7fc 100%);
+        border: 1px solid #d8e2f0;
+        border-radius: 12px;
+        padding: 0.85rem 1rem;
+        margin: 0.35rem 0 0.9rem 0;
+    }
+
+    .finsight-guide strong {
+        color: #0f2e53;
+    }
+
+    .finsight-chip {
+        display: inline-block;
+        background: #edf4ff;
+        border: 1px solid #cfdff7;
+        color: #0f2e53;
+        border-radius: 999px;
+        padding: 0.2rem 0.6rem;
+        margin-right: 0.35rem;
+        font-size: 0.82rem;
+        font-weight: 700;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -138,6 +173,18 @@ BASE_DIR = PROJECT_ROOT
 
 def p(path):
     return os.path.join(BASE_DIR, path)
+
+
+def render_tab_guide(user_action: str, user_output: str):
+    st.markdown(
+        f"""
+        <div class="finsight-guide">
+            <div><strong>What you do:</strong> {user_action}</div>
+            <div><strong>What you get:</strong> {user_output}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 # ── Load models (cached) ──────────────────────────────────────────────────────
 @st.cache_resource
@@ -202,35 +249,38 @@ st.markdown(
     """
     <div class="finlytics-hero">
         <h1 class="finlytics-hero-title"> Finlytics: Financial Predictive Analytics</h1>
-        <p class="finlytics-hero-subtitle">End-to-end ML forecasting on 1.3M Lending Club loan records</p>
+        <p class="finlytics-hero-subtitle">Plan ahead with clear forecasts, uncertainty ranges, and early warning signals.</p>
     </div>
     """,
-    unsafe_allow_html=True,
-)
-st.markdown("---")
+    unsafe_allow_html=True,)
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-    "Loan Default Risk",
-    "Borrower Churn",
-    "Loan Volume Forecast",
-    "Credit Demand by Grade",
+    "Default Risk",
+    "Return Risk",
+    "Volume Forecast",
+    "Demand by Grade",
     "Portfolio Intelligence Hub",
     "Bank Deposit AI",
-    "Deposit Anomaly",
+    "Anomaly Watch",
 ])
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 1 — MODULE 1: LOAN DEFAULT RISK
 # ══════════════════════════════════════════════════════════════════════════════
 with tab1:
-    st.header(" Loan Default Risk Prediction")
-    st.markdown("Predict whether a borrower will default on their loan.")
+    st.header("Loan Default Risk")
+    st.markdown("Estimate the chance that a borrower may miss repayment.")
+    render_tab_guide(
+        "Enter borrower and loan details.",
+        "A clear risk score with low, medium, or high signal.",
+    )
 
     try:
         m1 = load_module1_models()
 
         st.subheader("Model Performance")
+        st.caption("AUC closer to 1.0 means better separation between safer and riskier borrowers.")
         col1, col2, col3 = st.columns(3)
         col1.metric("Logistic Regression AUC", "0.6597")
         col2.metric("Random Forest AUC", "0.6831")
@@ -321,13 +371,18 @@ with tab1:
 # TAB 2 — MODULE 2: BORROWER CHURN
 # ══════════════════════════════════════════════════════════════════════════════
 with tab2:
-    st.header(" Borrower Churn Prediction")
-    st.markdown("Predict whether a borrower will return for a second loan after repayment.")
+    st.header("Borrower Return Risk")
+    st.markdown("Estimate whether a borrower is unlikely to come back for the next loan.")
+    render_tab_guide(
+        "Enter customer profile and repayment behavior factors.",
+        "A churn probability plus a simple retained vs churned decision hint.",
+    )
 
     try:
         m2 = load_module2_models()
 
         st.subheader("Model Performance")
+        st.caption("Higher AUC means the model is better at distinguishing likely return vs likely churn.")
         col1, col2, col3 = st.columns(3)
         col1.metric("Logistic Regression AUC", "0.7823")
         col2.metric("Random Forest AUC", "0.7906")
@@ -413,9 +468,14 @@ with tab2:
 # ══════════════════════════════════════════════════════════════════════════════
 with tab3:
     st.header("Loan Volume Forecast")
-    st.markdown("Forecast monthly total loan volume funded by Lending Club.")
+    st.markdown("See what the next months may look like, with honest uncertainty and baseline comparisons.")
+    render_tab_guide(
+        "Choose forecast horizon and optional what-if scenario settings.",
+        "Low, likely, high outcomes, confidence meter, warnings, and recommended actions.",
+    )
 
     st.subheader("Model Performance (Test period: 2015)")
+    st.caption("Lower MAPE is better. It means forecast error is smaller.")
     col1, col2, col3 = st.columns(3)
     col1.metric("Linear Regression MAPE", "1.92%", delta="Champion ✓")
     col2.metric("XGBoost MAPE", "10.30%")
@@ -424,41 +484,230 @@ with tab3:
     st.markdown("---")
 
     try:
-        monthly = load_monthly_data()
+        monthly = load_monthly_data().copy()
+        monthly = monthly.sort_values('month_start').reset_index(drop=True)
 
-        st.subheader("Historical Loan Volume")
-        fig, ax = plt.subplots(figsize=(12, 4))
-        ax.plot(monthly['month_start'], monthly['funded_amnt_m'],
-                color='steelblue', linewidth=1.5)
-        ax.set_title('Monthly Loan Volume Funded (USD Millions)')
+        explain_mode = st.radio(
+            "Explanation mode",
+            ["Business", "Technical"],
+            horizontal=True,
+            help="Switch between concise decision language and detailed model diagnostics.",
+        )
+
+        col_h1, col_h2 = st.columns([2, 3])
+        with col_h1:
+            horizon = st.slider("Forecast horizon (months)", 1, 6, 4, help="Short-horizon planning window on existing monthly dataset.")
+        with col_h2:
+            st.caption("Shows low / likely / high outcomes and compares against simple baselines to keep forecasts honest.")
+
+        forecast_df = forecast_with_uncertainty(monthly, horizon=horizon)
+        baseline_df = compute_baseline_forecasts(monthly, horizon=horizon)
+        merged_fc = forecast_df.merge(baseline_df, on='month_start', how='left')
+
+        st.markdown("---")
+        st.subheader("Scenario Sandbox")
+        sc1, sc2, sc3 = st.columns(3)
+        with sc1:
+            growth_adjust = st.slider("Adjust growth (%)", -20, 20, 0, step=1)
+        with sc2:
+            remove_outlier = st.checkbox("Remove recent outliers", value=False)
+        with sc3:
+            pattern_mode = st.selectbox(
+                "Pattern mode",
+                ["baseline", "flat", "seasonal_plus"],
+                format_func=lambda x: {
+                    "baseline": "Baseline pattern",
+                    "flat": "Flat trend",
+                    "seasonal_plus": "Seasonal boost",
+                }[x],
+            )
+
+        scenario_df = scenario_forecast(
+            monthly,
+            horizon=horizon,
+            growth_adjust_pct=float(growth_adjust),
+            remove_recent_outlier=bool(remove_outlier),
+            pattern_mode=pattern_mode,
+        )
+        scenario_merged = scenario_df.merge(baseline_df, on="month_start", how="left")
+
+        st.subheader("Historical + Forecast Range")
+        fig, ax = plt.subplots(figsize=(12, 4.6))
+        ax.plot(monthly['month_start'], monthly['funded_amnt_m'], color='steelblue', linewidth=1.5, label='Historical')
+        ax.plot(merged_fc['month_start'], merged_fc['forecast_central'], color='#0f2e53', linewidth=2.2, label='FinSight forecast')
+        ax.plot(scenario_df['month_start'], scenario_df['forecast_central'], color='#d95f02', linewidth=2.0, linestyle='--', label='Scenario forecast')
+        ax.fill_between(
+            merged_fc['month_start'],
+            merged_fc['forecast_lower'],
+            merged_fc['forecast_upper'],
+            color='#1c6e8c',
+            alpha=0.2,
+            label='Uncertainty band',
+        )
+        ax.set_title('Loan Volume Forecast with Uncertainty Band (USD Millions)')
         ax.set_ylabel('Funded Amount (USD M)')
         ax.grid(alpha=0.3)
+        ax.legend()
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
         plt.tight_layout()
         st.pyplot(fig)
         plt.close()
 
+        st.subheader("Forecast Comparison Table")
+        table_out = merged_fc.copy()
+        table_out['month_start'] = table_out['month_start'].dt.strftime('%Y-%m')
+        table_out = table_out.rename(columns={
+            'month_start': 'Month',
+            'forecast_central': 'Likely',
+            'forecast_lower': 'Low',
+            'forecast_upper': 'High',
+            'naive_last': 'Simple baseline (last value)',
+            'moving_avg_3': 'Simple baseline (moving average)',
+            'exp_smoothing': 'Simple baseline (smoothed)',
+        })
+        st.dataframe(table_out, use_container_width=True, hide_index=True)
+
+        delta_df = scenario_df[["month_start", "forecast_central"]].merge(
+            merged_fc[["month_start", "forecast_central"]],
+            on="month_start",
+            suffixes=("_scenario", "_baseline"),
+        )
+        delta_df["delta"] = delta_df["forecast_central_scenario"] - delta_df["forecast_central_baseline"]
+        delta_df["month_start"] = delta_df["month_start"].dt.strftime("%Y-%m")
+        st.caption("Scenario vs baseline delta")
+        st.dataframe(
+            delta_df.rename(
+                columns={
+                    "month_start": "Month",
+                    "forecast_central_scenario": "Scenario Likely",
+                    "forecast_central_baseline": "Baseline Likely",
+                    "delta": "Delta",
+                }
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        st.markdown("---")
+        st.subheader("Reliability Check Against Simple Methods")
+        backtest_df = baseline_backtest(monthly, holdout=horizon)
+        best_row = backtest_df.iloc[0]
+        m1, m2 = st.columns(2)
+        m1.metric("Most accurate on recent data", best_row['model'])
+        m2.metric("Best MAPE", f"{best_row['mape']:.2f}%")
+        st.dataframe(backtest_df.rename(columns={'model': 'Model', 'mape': 'MAPE (%)'}), use_container_width=True, hide_index=True)
+
+        conf_label, conf_score = forecast_confidence_label(backtest_df, merged_fc)
+        cfm1, cfm2 = st.columns(2)
+        cfm1.metric("Forecast confidence", conf_label)
+        cfm2.metric("Confidence score", f"{conf_score:.1f}/100")
+
+        st.markdown("---")
+        st.subheader("Forecast Quality Over Time")
+        rolling_df = rolling_backtest(monthly, max_horizon=6)
+        if rolling_df.empty:
+            st.info("Not enough history yet to run the quality-over-time check.")
+        else:
+            rfig, rax = plt.subplots(figsize=(10.5, 3.8))
+            rax.plot(rolling_df["horizon"], rolling_df["mape"], marker="o", color="#0f2e53", label="MAPE (%)")
+            rax.plot(rolling_df["horizon"], rolling_df["coverage"], marker="s", color="#1c6e8c", label="Coverage (%)")
+            rax.set_xlabel("Horizon (months)")
+            rax.set_ylabel("Score")
+            rax.set_title("Forecast Quality by Horizon")
+            rax.grid(alpha=0.3)
+            rax.legend()
+            st.pyplot(rfig)
+            plt.close(rfig)
+            st.dataframe(
+                rolling_df.rename(columns={"horizon": "Horizon", "mape": "MAPE (%)", "coverage": "Coverage (%)"}),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+        qa_snapshot = forecast_qa_snapshot(monthly, rolling_df)
+        qa1, qa2, qa3, qa4 = st.columns(4)
+        qa1.metric("Records", f"{qa_snapshot['records']}")
+        qa2.metric("Missing ratio", f"{qa_snapshot['missing_ratio']:.2f}%")
+        qa3.metric("Data lag", f"{qa_snapshot['data_lag_days']:.0f} days")
+        qa4.metric("Avg rolling MAPE", "N/A" if np.isnan(qa_snapshot['avg_rolling_mape']) else f"{qa_snapshot['avg_rolling_mape']:.2f}%")
+
+        st.markdown("---")
+        st.subheader("Early Warning Signals")
+        anomalies = detect_recent_anomalies(monthly, window=6, z_limit=1.8)
+        if anomalies.empty:
+            st.success("No major recent spikes or dips outside the normal expected range.")
+            root_cause_text = "No material warning signal in recent months."
+        else:
+            latest = anomalies.iloc[-1]
+            st.warning(
+                f"Recent {latest['direction'].lower()} detected on {latest['month_start'].strftime('%Y-%m')} "
+                f"(actual {latest['funded_amnt_m']:.2f} vs expected range {latest['lower']:.2f}-{latest['upper']:.2f})."
+            )
+            root_cause_text = anomaly_root_cause_hint(monthly, latest)
+            st.caption(f"Likely drivers: {root_cause_text}")
+            preview = anomalies.copy()
+            preview['month_start'] = preview['month_start'].dt.strftime('%Y-%m')
+            st.dataframe(preview.rename(columns={
+                'month_start': 'Month',
+                'funded_amnt_m': 'Actual',
+                'lower': 'Expected Low',
+                'upper': 'Expected High',
+                'direction': 'Signal',
+            }), use_container_width=True, hide_index=True)
+
+        total_growth = (scenario_merged['forecast_central'].iloc[-1] - monthly['funded_amnt_m'].iloc[-1]) / max(1e-6, monthly['funded_amnt_m'].iloc[-1])
+        low_bound = (scenario_merged['forecast_lower'].iloc[-1] - monthly['funded_amnt_m'].iloc[-1]) / max(1e-6, monthly['funded_amnt_m'].iloc[-1])
+        high_bound = (scenario_merged['forecast_upper'].iloc[-1] - monthly['funded_amnt_m'].iloc[-1]) / max(1e-6, monthly['funded_amnt_m'].iloc[-1])
+
+        action_text = recommend_next_action(conf_label, anomalies, total_growth)
+        st.subheader("Recommended Next Action")
+        st.info(action_text)
+        rolling_coverage_text = "N/A" if np.isnan(qa_snapshot['avg_rolling_coverage']) else f"{qa_snapshot['avg_rolling_coverage']:.2f}%"
+
+        if explain_mode == "Business":
+            st.success(
+                f"Outlook for next {horizon} months: likely **{total_growth:+.1%}** change, "
+                f"with uncertainty range **{low_bound:+.1%} to {high_bound:+.1%}**."
+            )
+        else:
+            st.info(
+                f"Technical summary: scenario growth adjust={growth_adjust:+d}%, pattern={pattern_mode}, "
+                f"confidence={conf_label} ({conf_score:.1f}/100), rolling coverage="
+                f"{rolling_coverage_text}"
+            )
+
+        brief_md = generate_forecast_brief_md(
+            horizon=horizon,
+            forecast_df=scenario_df,
+            baseline_df=baseline_df,
+            confidence_label=conf_label,
+            confidence_score=conf_score,
+            anomalies=anomalies,
+            qa_snapshot=qa_snapshot,
+            action_text=action_text,
+        )
+        st.download_button(
+            "Download forecast brief (Markdown)",
+            data=brief_md,
+            file_name="finsight_forecast_brief.md",
+            mime="text/markdown",
+            key="download_forecast_brief",
+        )
+        st.text_area("Forecast brief preview", brief_md, height=200)
+
     except Exception as e:
-        st.warning(f"Could not load monthly data: {e}")
-
-    st.markdown("---")
-    st.subheader("3-Month Forecast (Prophet)")
-    forecast_data = pd.DataFrame({
-        'Month':            ['2016-01', '2016-02', '2016-03'],
-        'Forecast (USD M)': [613.50, 451.70, 431.82],
-        'Lower Bound':      [595.98, 435.95, 414.94],
-        'Upper Bound':      [631.59, 467.59, 447.87],
-    })
-    st.dataframe(forecast_data, use_container_width=True, hide_index=True)
-
-    st.info("💡 **Key Insight:** Linear Regression outperformed XGBoost and Prophet during the stable growth period (2008–2015), demonstrating that model complexity should be justified by data complexity.")
+        st.warning(f"Could not build forecast insights: {e}")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 4 — MODULE 4: CREDIT DEMAND BY GRADE
 # ══════════════════════════════════════════════════════════════════════════════
 with tab4:
     st.header("Credit Demand Forecast by Grade")
-    st.markdown("Forecast monthly loan demand segmented by credit grade (A–E).")
+    st.markdown("Understand which credit segments are growing or slowing down over time.")
+    render_tab_guide(
+        "Pick one or more grades to visualize.",
+        "Trend lines and heatmaps showing where demand is strongest.",
+    )
 
     st.subheader("Model Performance — MAPE (%) by Grade")
     mape_df = pd.DataFrame({
@@ -556,7 +805,11 @@ with tab4:
 # ══════════════════════════════════════════════════════════════════════════════
 with tab5:
     st.header("Portfolio Intelligence Hub")
-    st.markdown("Interactive scenario testing, batch portfolio scoring, explainability, drift monitoring, and executive report export.")
+    st.markdown("A control center for stress testing, batch scoring, explainability, and decision-ready export.")
+    render_tab_guide(
+        "Upload or generate a portfolio, then run scenario and risk analysis.",
+        "Risk bands, drift alerts, key drivers, and an executive-ready summary.",
+    )
 
     try:
         m1 = load_module1_models()
@@ -713,7 +966,11 @@ with tab5:
 # ══════════════════════════════════════════════════════════════════════════════
 with tab6:
     st.header("Bank Term Deposit Prediction")
-    st.markdown("SMOTE-balanced tri-model classifier (Logistic Regression, Decision Tree, Random Forest) with one-hot encoded campaign features.")
+    st.markdown("Predict who is likely to subscribe to a term deposit and improve campaign targeting.")
+    render_tab_guide(
+        "Use the default dataset or upload your own and run predictions.",
+        "Subscription probability, best model snapshot, and top influencing factors.",
+    )
 
     try:
         default_artifacts, default_raw_df = load_bank_term_deposit_defaults()
@@ -760,6 +1017,7 @@ with tab6:
 
         st.markdown("---")
         st.subheader("Model Leaderboard")
+        st.caption("These scores show how well each model predicts subscription on validation data.")
         metrics_df = artifacts.metrics.copy()
         display_metrics = metrics_df.copy()
         for col in ["accuracy", "precision", "recall", "f1"]:
@@ -834,7 +1092,7 @@ with tab6:
         st.dataframe(top_features_df.head(8), use_container_width=True, hide_index=True)
 
         st.markdown("---")
-        st.subheader("Campaign Suggestion")
+        st.subheader("Suggested Next Campaign Step")
         suggestion = generate_llm_campaign_advice(
             model_name=model_choice,
             prediction_prob=prob,
@@ -851,7 +1109,11 @@ with tab6:
 # ══════════════════════════════════════════════════════════════════════════════
 with tab7:
     st.header("Unusual Deposit Detection")
-    st.markdown("Hybrid anomaly engine using **Isolation Forest** + **MLP reconstruction error** on deposit behavior features.")
+    st.markdown("Catch unusual deposit patterns early so teams can investigate quickly.")
+    render_tab_guide(
+        "Scan single transactions or upload a batch file.",
+        "Anomaly score, reason hints, risk trend, and downloadable flagged results.",
+    )
     try:
         default_anomaly_artifacts, default_anomaly_df = load_bank_anomaly_defaults()
         if "anomaly_artifacts" not in st.session_state:
@@ -865,10 +1127,10 @@ with tab7:
         st.subheader("Model Setup")
         m1, m2, m3 = st.columns(3)
         m1.metric("Training rows", f"{len(anomaly_df):,}")
-        m2.metric("Contamination", f"{anomaly_artifacts.contamination:.1%}")
-        m3.metric("Recon threshold", f"{anomaly_artifacts.reconstruction_threshold:.3f}")
+        m2.metric("Expected anomaly rate", f"{anomaly_artifacts.contamination:.1%}")
+        m3.metric("Alert sensitivity", f"{anomaly_artifacts.reconstruction_threshold:.3f}")
 
-        with st.expander("Retrain anomaly engine"):
+        with st.expander("Optional: Retrain detector on your own file"):
             uploaded_anomaly = st.file_uploader(
                 "Upload CSV with columns: amount, hour, day_of_week, frequency",
                 type=["csv"],
