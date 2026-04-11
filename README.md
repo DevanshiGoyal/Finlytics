@@ -16,7 +16,7 @@
 
 ## 1. Overview
 
-FinSight is an end-to-end financial analytics project that unifies prediction, forecasting, anomaly detection, explainability, and dashboard storytelling. It addresses a common hackathon problem: many strong models but no integrated product view for decision-makers. This platform turns model outputs into practical business intelligence through interactive workflows. It is designed for hackathon judges, data science teams, financial analysts, and product stakeholders.
+Imagine a small lending company where one person checks default risk in Excel, another tracks churn in a notebook, and another watches suspicious deposits in a separate tool. Every decision is slow because information is scattered. FinSight solves this simple problem: **bring all key financial decisions into one easy dashboard** so teams can act faster and with more confidence. People use it because it saves time, reduces guesswork, and turns raw model outputs into clear actions they can understand—even if they are not ML experts.
 
 ---
 
@@ -73,6 +73,57 @@ flowchart TD
 
 ---
 
+## 4.1 Models Used and Comparison Tables
+
+### Model inventory by module
+
+| Module                 | Problem Type                   | Models Used                                            |
+| ---------------------- | ------------------------------ | ------------------------------------------------------ |
+| Loan Default Risk      | Binary classification          | Logistic Regression, Random Forest, XGBoost            |
+| Borrower Churn         | Binary classification          | Logistic Regression, Random Forest, XGBoost            |
+| Loan Volume Forecast   | Time-series regression         | Linear Regression, XGBoost, Prophet                    |
+| Credit Demand by Grade | Grade-wise regression          | Linear Regression, Random Forest, XGBoost              |
+| Bank Deposit AI        | Binary classification          | Logistic Regression, Decision Tree, Random Forest      |
+| Deposit Anomaly        | Unsupervised anomaly detection | Isolation Forest + MLPRegressor (reconstruction error) |
+
+### Performance comparison (dashboard values)
+
+#### Loan Default Risk (AUC)
+
+| Model                  |        AUC |
+| ---------------------- | ---------: |
+| Logistic Regression    |     0.6597 |
+| Random Forest          |     0.6831 |
+| **XGBoost (Champion)** | **0.7168** |
+
+#### Borrower Churn (AUC)
+
+| Model                  |        AUC |
+| ---------------------- | ---------: |
+| Logistic Regression    |     0.7823 |
+| Random Forest          |     0.7906 |
+| **XGBoost (Champion)** | **0.8139** |
+
+#### Loan Volume Forecast (MAPE)
+
+| Model                            |      MAPE |
+| -------------------------------- | --------: |
+| **Linear Regression (Champion)** | **1.92%** |
+| XGBoost                          |    10.30% |
+| Prophet                          |    29.87% |
+
+#### Credit Demand by Grade (MAPE %)
+
+| Model             | Grade A | Grade B | Grade C |  Grade D | Grade E |
+| ----------------- | ------: | ------: | ------: | -------: | ------: |
+| Linear Regression |    2.72 |    4.97 |    5.03 |    13.10 |    8.73 |
+| Random Forest     |   33.42 |   26.56 |   20.96 |    14.35 |   20.99 |
+| XGBoost           |   18.03 |   12.33 |   12.64 | **8.55** |   19.45 |
+
+> Bank Deposit AI metrics are dataset-dependent and computed at runtime in the tab leaderboard (Accuracy, Precision, Recall, F1).
+
+---
+
 ## 5. How Each Tab Works
 
 This section explains exactly what happens inside each tab, including input, model logic, and output.
@@ -83,6 +134,7 @@ Purpose:
 Predict default probability for a borrower.
 
 How it works:
+
 1. User enters borrower and loan details.
 2. Input is converted to model-ready features.
 3. XGBoost default model returns probability.
@@ -98,6 +150,7 @@ Purpose:
 Estimate if a borrower is unlikely to return for another loan.
 
 How it works:
+
 1. User provides customer and loan behavior attributes.
 2. Features are encoded and aligned to training schema.
 3. XGBoost churn model predicts churn probability.
@@ -112,6 +165,7 @@ Purpose:
 Forecast monthly lending volume.
 
 How it works:
+
 1. App loads historical monthly series from processed data.
 2. Performance comparison is shown across baseline models.
 3. Forecast table displays next 3-month estimate and bounds.
@@ -126,6 +180,7 @@ Purpose:
 Forecast demand split by credit grade (A to E).
 
 How it works:
+
 1. App loads grade-level monthly demand history.
 2. User selects grades to visualize.
 3. Demand trends and heatmaps reveal seasonality and segment behavior.
@@ -140,6 +195,7 @@ Purpose:
 Provide portfolio-level intelligence in one control center.
 
 How it works:
+
 1. Stress testing adjusts baseline profile under shocks (rate, income, DTI).
 2. Batch scorer processes uploaded CSV and computes default/churn/risk band.
 3. Explainability ranks global and local feature impacts.
@@ -155,6 +211,7 @@ Purpose:
 Predict term-deposit subscription likelihood and optimize outreach.
 
 How it works:
+
 1. Dataset loads from default source or user upload.
 2. Models are trained/evaluated (LogReg, Decision Tree, Random Forest).
 3. Leaderboard displays accuracy, precision, recall, and F1.
@@ -170,6 +227,7 @@ Purpose:
 Detect suspicious transaction patterns.
 
 How it works:
+
 1. Hybrid anomaly engine combines Isolation Forest and reconstruction error.
 2. Live scan scores single transactions with reasons.
 3. Batch scanner scores uploaded files and flags anomalous records.
@@ -178,33 +236,87 @@ How it works:
 Business value:
 Early warning for fraud and unusual behavior patterns.
 
+### Use Cases:
+
+Imagine a small fintech team with three people:
+
+- **Riya** (Risk Analyst)
+- **Arjun** (Marketing Lead)
+- **Sara** (Operations Manager)
+
+They open FinSight every morning. Here is how each tab helps them in real life:
+
+1. **Loan Default Risk**
+
+- Riya checks a new applicant before approval.
+- If the risk is high, she can suggest stricter checks or a smaller loan amount.
+- In simple words: this tab answers, **"Will this borrower likely pay back or default?"**
+
+2. **Borrower Churn**
+
+- Arjun checks which customers may never come back for another loan.
+- He targets high-churn users with retention offers.
+- In simple words: this tab answers, **"Who might stop using us after one loan?"**
+
+3. **Loan Volume Forecast**
+
+- Sara checks how much total lending volume is expected in coming months.
+- She uses this to plan staffing, support load, and funding.
+- In simple words: this tab answers, **"How much business are we likely to process next?"**
+
+4. **Credit Demand by Grade**
+
+- Riya checks demand trends for grade A/B/C/D/E borrowers separately.
+- This helps balance growth and risk by segment.
+- In simple words: this tab answers, **"Which risk grade will request more loans?"**
+
+5. **Portfolio Intelligence Hub**
+
+- The whole team runs "what-if" scenarios like interest-rate shocks or income drops.
+- They upload portfolio CSVs to score risk in bulk, check drift, and export a management brief.
+- In simple words: this tab answers, **"What happens to our portfolio if market conditions change?"**
+
+6. **Bank Deposit AI**
+
+- Arjun uploads campaign data and compares models to predict deposit subscription.
+- He then focuses outreach on customers with higher subscription probability.
+- In simple words: this tab answers, **"Who is most likely to say yes to our deposit campaign?"**
+
+7. **Deposit Anomaly**
+
+- Sara monitors incoming transactions and sees if any deposit pattern looks suspicious.
+- If flagged, the team can review quickly before losses grow.
+- In simple words: this tab answers, **"Does this transaction look unusual or potentially risky?"**
+
+This story-based flow is exactly why FinSight is useful: each tab solves one practical decision, and together they give a full business control center.
+
 ---
 
 ## 6. Visual Evidence (Model Outputs)
 
 ### Default Risk Diagnostics
 
-![Module 1 ROC](reports/module1_roc_curve.png)
-![Module 1 Confusion Matrix](reports/module1_confusion_matrix.png)
-![Module 1 SHAP](reports/module1_shap.png)
+<img src="reports/module1_roc_curve.png" alt="Module 1 ROC" width="700" />
+<img src="reports/module1_confusion_matrix.png" alt="Module 1 Confusion Matrix" width="700" />
+<img src="reports/module1_shap.png" alt="Module 1 SHAP" width="700" />
 
 ### Churn Diagnostics
 
-![Module 2 ROC](reports/module2_roc_curve.png)
-![Module 2 Confusion Matrix](reports/module2_confusion_matrix.png)
-![Module 2 Feature Importance](reports/module2_feature_importance.png)
+<img src="reports/module2_roc_curve.png" alt="Module 2 ROC" width="700" />
+<img src="reports/module2_confusion_matrix.png" alt="Module 2 Confusion Matrix" width="700" />
+<img src="reports/module2_feature_importance.png" alt="Module 2 Feature Importance" width="700" />
 
 ### Forecasting Results
 
-![Module 3 Time Series](reports/module3_time_series.png)
-![Module 3 Forecast](reports/module3_forecast.png)
-![Module 3 Prophet Components](reports/module3_prophet_components.png)
+<img src="reports/module3_time_series.png" alt="Module 3 Time Series" width="700" />
+<img src="reports/module3_forecast.png" alt="Module 3 Forecast" width="700" />
+<img src="reports/module3_prophet_components.png" alt="Module 3 Prophet Components" width="700" />
 
 ### Grade Demand Results
 
-![Module 4 Demand By Grade](reports/module4_demand_by_grade.png)
-![Module 4 Forecast By Grade](reports/module4_forecast_by_grade.png)
-![Module 4 MAPE Heatmap](reports/module4_mape_heatmap.png)
+<img src="reports/module4_demand_by_grade.png" alt="Module 4 Demand By Grade" width="700" />
+<img src="reports/module4_forecast_by_grade.png" alt="Module 4 Forecast By Grade" width="700" />
+<img src="reports/module4_mape_heatmap.png" alt="Module 4 MAPE Heatmap" width="700" />
 
 ---
 
@@ -371,5 +483,3 @@ pytest -q
 
 - Dataset source: Lending Club public loan data (Kaggle workflow).
 - Built as a portfolio + hackathon-ready analytics product.
-
-If this project helps you, consider starring the repository and sharing feedback.
