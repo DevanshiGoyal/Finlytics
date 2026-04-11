@@ -9,7 +9,6 @@
   <img src="https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Streamlit" />
   <img src="https://img.shields.io/badge/XGBoost-Modeling-FF7F0E?style=for-the-badge" alt="XGBoost" />
   <img src="https://img.shields.io/badge/Prophet-Time%20Series-2E8B57?style=for-the-badge" alt="Prophet" />
-  <img src="https://img.shields.io/badge/Status-Hackathon%20Ready-4CAF50?style=for-the-badge" alt="Hackathon Ready" />
 </p>
 
 ---
@@ -32,14 +31,9 @@ Imagine a small lending company where one person checks default risk in Excel, a
 
 ## 3. Architecture (Hackathon Flow)
 
-```mermaid
-flowchart TD
-    A[Input Data - Bank and Lending] --> B[1. Prediction Engine]
-    B --> C[2. Forecasting Layer]
-    C --> D[3. Anomaly Detection]
-    D --> E[4. Explainability and AI Insights]
-    E --> F[5. Streamlit Dashboard]
-```
+<p align="center">
+  <img src="reports/architecture_hackathon_flow.svg" alt="FinSight architecture flow" width="700" />
+</p>
 
 ### Runtime Architecture
 
@@ -88,39 +82,9 @@ flowchart TD
 
 ### Performance comparison (dashboard values)
 
-#### Loan Default Risk (AUC)
-
-| Model                  |        AUC |
-| ---------------------- | ---------: |
-| Logistic Regression    |     0.6597 |
-| Random Forest          |     0.6831 |
-| **XGBoost (Champion)** | **0.7168** |
-
-#### Borrower Churn (AUC)
-
-| Model                  |        AUC |
-| ---------------------- | ---------: |
-| Logistic Regression    |     0.7823 |
-| Random Forest          |     0.7906 |
-| **XGBoost (Champion)** | **0.8139** |
-
-#### Loan Volume Forecast (MAPE)
-
-| Model                            |      MAPE |
-| -------------------------------- | --------: |
-| **Linear Regression (Champion)** | **1.92%** |
-| XGBoost                          |    10.30% |
-| Prophet                          |    29.87% |
-
-#### Credit Demand by Grade (MAPE %)
-
-| Model             | Grade A | Grade B | Grade C |  Grade D | Grade E |
-| ----------------- | ------: | ------: | ------: | -------: | ------: |
-| Linear Regression |    2.72 |    4.97 |    5.03 |    13.10 |    8.73 |
-| Random Forest     |   33.42 |   26.56 |   20.96 |    14.35 |   20.99 |
-| XGBoost           |   18.03 |   12.33 |   12.64 | **8.55** |   19.45 |
-
-> Bank Deposit AI metrics are dataset-dependent and computed at runtime in the tab leaderboard (Accuracy, Precision, Recall, F1).
+<p align="center">
+  <img src="data/external/img1.png" alt="Performance comparison dashboard values" width="700" />
+</p>
 
 ---
 
@@ -461,26 +425,7 @@ pytest -q
 
 ---
 
-## 12. Limitations
-
-- Some visuals depend on local processed files and model artifacts.
-- Notebook dependencies can fail on Windows without long-path support.
-- No production API layer or auth layer yet.
-- Metrics are dependent on available dataset versions and preprocessing assumptions.
-
----
-
-## 13. Future Improvements
-
-- Add experiment tracking and model version registry.
-- Add CI pipeline for automated validation and report generation.
-- Expose inference endpoints via FastAPI.
-- Add role-based access and audit logs.
-- Add automated drift alerts and retraining triggers.
-
----
-
-## 14. Team and Credits
+## 12. Team and Credits
 
 - Dataset source: Lending Club public loan data (Kaggle workflow).
 - Built as a portfolio + hackathon-ready analytics product.
