@@ -1,6 +1,7 @@
 # Virtual environment
 venv/
 .venv/
+.venv312/
 env/
 
 # Dataset (too large for GitHub)
@@ -24,6 +25,17 @@ Thumbs.db
 
 # Model files (optional — comment out if you want to push models)
 # models/
+models/bank_term_deposit_artifacts.pkl
+models/deposit_anomaly_artifacts.pkl
 
 # Environment variables
 .env
+
+# Node / Next.js artifacts
+node_modules/
+.next/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
