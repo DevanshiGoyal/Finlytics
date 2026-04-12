@@ -491,7 +491,7 @@ pytest -q
 | -------- | -------- | ------- | ------- |
 | GEMINI_API_KEY | Optional | your_gemini_api_key | Enables Ask Finlytics AI responses |
 | NEXT_PUBLIC_API_BASE_URL | Optional | http://localhost:3000 | Overrides frontend API base URL |
-| FINLYTICS_PYTHON | Optional | C:/path/to/python.exe | Forces Python interpreter for model bridge |
+| FINLYTICS_PYTHON | Optional | C:/path/to/python.exe | Forces Python interpreter for model Bridge |
 
 ---
 
