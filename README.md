@@ -1,12 +1,13 @@
-﻿# Finlytics - Financial Predictive Analytics
+# Finlytics - Financial Predictive Analytics
 
 <p align="center">
-  <strong>From raw banking data to decision-ready AI insights in one Streamlit experience.</strong>
+  <strong>One platform to predict risk, detect fraud, and forecast demand — all from your browser.</strong>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
   <img src="https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Streamlit" />
+  <img src="https://img.shields.io/badge/Next.js-Frontend-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js" />
   <img src="https://img.shields.io/badge/XGBoost-Modeling-FF7F0E?style=for-the-badge" alt="XGBoost" />
   <img src="https://img.shields.io/badge/Prophet-Time%20Series-2E8B57?style=for-the-badge" alt="Prophet" />
 </p>
@@ -15,61 +16,68 @@
 
 ## 1. Overview
 
-Imagine a small lending company where one person checks default risk in Excel, another tracks churn in a notebook, and another watches suspicious deposits in a separate tool. Every decision is slow because information is scattered. Finlytics solves this simple problem: **bring all key financial decisions into one easy dashboard** so teams can act faster and with more confidence. People use it because it saves time, reduces guesswork, and turns raw model outputs into clear actions they can understand—even if they are not ML experts.
+**Finlytics** is a full-stack financial analytics platform that brings together machine learning models for loan risk, customer churn, demand forecasting, and deposit fraud — all in one place.
+
+It has two interfaces:
+- A **Streamlit dashboard** (`dashboard/app.py`) for analysts and data teams to interact with ML models directly.
+- A **Next.js web frontend** (`finlytics-frontend/`) for a modern, user-friendly UI experience.
+
+The goal is simple: give financial teams the tools to make smarter decisions faster, without needing to write code or open a notebook.
 
 ---
 
 ## 2. Why This Project Stands Out
 
-- One platform, multiple financial AI capabilities.
-- Interactive product-style experience (not just notebooks).
-- Explainability and drift signals included, not treated as afterthoughts.
-- Includes both single prediction and batch scoring workflows.
-- Export-ready reporting for executive communication.
+- Covers multiple real-world financial use cases in a single product.
+- Two fully built interfaces — a Streamlit dashboard and a Next.js web app.
+- Supports both single-record prediction and bulk CSV batch scoring.
+- Includes explainability (SHAP), drift monitoring, and stress testing.
+- Executive report export for sharing insights with non-technical stakeholders.
+- Synthetic data fallback means it runs out of the box without external datasets.
 
 ---
 
-## 3. Architecture 
+## 3. Architecture
 
 ```mermaid
 %%{init: {"flowchart": {"useMaxWidth": false, "diagramPadding": 4, "nodeSpacing": 18, "rankSpacing": 28}}}%%
 flowchart TD
-    A[Input Data - Bank and Lending] --> B[1. Prediction Engine]
+    A[Input Data - Bank and Lending CSVs] --> B[1. Prediction Engine]
     B --> C[2. Forecasting Layer]
     C --> D[3. Anomaly Detection]
     D --> E[4. Explainability and AI Insights]
-    E --> F[5. Streamlit Dashboard]
+    E --> F[5. Streamlit Dashboard / Next.js Frontend]
 ```
 
 ### Runtime Architecture
 
-- UI Layer: Streamlit app in `dashboard/app.py`.
-- Domain Logic Layer: Reusable modules in `src/`.
-- Model Layer: Pretrained artifacts in `models/`.
-- Data Layer: CSV inputs from `data/`, with synthetic fallback support.
+- **UI Layer:** Streamlit app in `dashboard/app.py` and Next.js app in `finlytics-frontend/`.
+- **Domain Logic Layer:** Reusable Python modules in `src/`.
+- **Model Layer:** Pretrained model artifacts stored in `models/`.
+- **Data Layer:** CSV inputs from `data/`, with built-in synthetic data fallback.
 
 ---
 
 ## 4. Features (Implemented and Working)
 
-- Loan Default Risk prediction with probability and risk interpretation.
-- Borrower Churn prediction after repayment behavior.
-- Loan Volume forecasting with historical trend and 3-month outlook.
-- Credit Demand forecasting by grade (A to E) with comparative visuals.
-- Portfolio Intelligence Hub:
-  - Stress testing scenarios.
-  - Batch portfolio scoring.
-  - Explainability (global and local).
-  - Drift monitoring.
-  - Executive report export.
-- Bank Deposit AI:
-  - Multi-model training and leaderboard.
-  - Interactive customer subscription prediction.
-  - Retraining on uploaded campaign data.
-- Deposit Anomaly Detection:
-  - Hybrid anomaly scoring.
-  - Live transaction scan.
-  - Batch anomaly scoring and export.
+- **Loan Default Risk** — predict default probability for any borrower.
+- **Borrower Churn** — estimate if a customer is unlikely to return.
+- **Loan Volume Forecast** — 3-month outlook of total lending activity.
+- **Credit Demand by Grade** — demand forecasting split by borrower grade (A–E).
+- **Portfolio Intelligence Hub:**
+  - Stress test scenarios (rate shocks, income drops, DTI changes).
+  - Batch portfolio scoring from uploaded CSV.
+  - Global and local explainability (feature importance + SHAP).
+  - Feature drift monitoring.
+  - Executive report export (Markdown).
+- **Bank Deposit AI:**
+  - Train and compare multiple models on campaign data.
+  - Predict term-deposit subscription likelihood.
+  - Retrain on newly uploaded datasets.
+- **Deposit Anomaly Detection:**
+  - Hybrid scoring using Isolation Forest + reconstruction error.
+  - Live single-transaction scan with reason hints.
+  - Batch anomaly scoring with downloadable results.
 
 ---
 
@@ -89,124 +97,115 @@ flowchart TD
 ### Performance comparison (dashboard values)
 
 <p align="center">
-  <img src="data/external/img1.png" alt="Performance comparison dashboard values" width="700" />
+  <img src="data/external/img1.png" alt="Model performance comparison across modules" width="700" />
 </p>
 
 ---
 
 ## 5. How Each Tab Works
 
-This section explains exactly what happens inside each tab, including input, model logic, and output.
-
 ### Tab 1: Loan Default Risk
 
-Purpose:
-Predict default probability for a borrower.
+**Purpose:** Predict whether a borrower is likely to default on their loan.
 
-How it works:
+**How it works:**
+1. User enters borrower details (income, loan amount, credit grade, etc.).
+2. Input is processed into model-ready features.
+3. XGBoost model returns a default probability score.
+4. Dashboard maps the score to a risk label: Low / Medium / High.
+5. User sees the probability, decision threshold, and a recommended action.
 
-1. User enters borrower and loan details.
-2. Input is converted to model-ready features.
-3. XGBoost default model returns probability.
-4. Dashboard maps probability to risk labels (low/medium/high).
-5. User sees probability, threshold, and final decision guidance.
+**Business value:** Helps credit analysts quickly triage new applications.
 
-Business value:
-Supports credit risk triage and pricing decisions.
+---
 
 ### Tab 2: Borrower Churn
 
-Purpose:
-Estimate if a borrower is unlikely to return for another loan.
+**Purpose:** Find out if a borrower is unlikely to take another loan in the future.
 
-How it works:
+**How it works:**
+1. User provides customer and repayment behavior details.
+2. Features are encoded and matched to the training schema.
+3. XGBoost churn model outputs a churn probability.
+4. UI shows whether the customer is likely to stay or churn.
 
-1. User provides customer and loan behavior attributes.
-2. Features are encoded and aligned to training schema.
-3. XGBoost churn model predicts churn probability.
-4. UI returns churn risk and retained/churned interpretation.
+**Business value:** Allows marketing teams to run targeted retention campaigns.
 
-Business value:
-Enables retention strategies and campaign prioritization.
+---
 
 ### Tab 3: Loan Volume Forecast
 
-Purpose:
-Forecast monthly lending volume.
+**Purpose:** Predict how much total loan volume is expected in the next 3 months.
 
-How it works:
+**How it works:**
+1. Historical monthly loan series is loaded from processed data.
+2. Multiple forecasting models are compared side by side.
+3. A forecast table shows estimates and confidence bounds.
+4. A trend chart helps identify growth or decline patterns.
 
-1. App loads historical monthly series from processed data.
-2. Performance comparison is shown across baseline models.
-3. Forecast table displays next 3-month estimate and bounds.
-4. Historical line chart helps detect trend shifts.
+**Business value:** Helps operations teams plan staffing and capital allocation.
 
-Business value:
-Useful for planning capital allocation and operations staffing.
+---
 
 ### Tab 4: Credit Demand by Grade
 
-Purpose:
-Forecast demand split by credit grade (A to E).
+**Purpose:** Forecast loan demand separately for each credit grade (A to E).
 
-How it works:
+**How it works:**
+1. Grade-level monthly demand history is loaded.
+2. User selects which grades to view.
+3. Demand trends and a heatmap reveal seasonality per grade.
+4. MAPE comparison table shows which model works best per grade.
 
-1. App loads grade-level monthly demand history.
-2. User selects grades to visualize.
-3. Demand trends and heatmaps reveal seasonality and segment behavior.
-4. Comparative MAPE table highlights best model per grade.
+**Business value:** Supports better portfolio balancing across risk segments.
 
-Business value:
-Improves portfolio balancing across risk bands.
+---
 
 ### Tab 5: Portfolio Intelligence Hub
 
-Purpose:
-Provide portfolio-level intelligence in one control center.
+**Purpose:** Give a complete picture of your entire loan portfolio's health in one place.
 
-How it works:
+**How it works:**
+1. Stress testing simulates scenarios like rate hikes or income drops.
+2. Batch scorer processes an uploaded CSV and tags each loan with risk scores.
+3. Explainability panel shows which features drive predictions globally and locally.
+4. Drift monitor flags if current borrower data has shifted from the training baseline.
+5. Executive report generator creates a ready-to-share Markdown summary.
 
-1. Stress testing adjusts baseline profile under shocks (rate, income, DTI).
-2. Batch scorer processes uploaded CSV and computes default/churn/risk band.
-3. Explainability ranks global and local feature impacts.
-4. Drift monitor compares current vs baseline feature distribution.
-5. Executive report generator exports a markdown risk brief.
+**Business value:** Supports risk committees, governance reviews, and scenario planning.
 
-Business value:
-Supports risk committees, governance reviews, and scenario planning.
+---
 
 ### Tab 6: Bank Deposit AI
 
-Purpose:
-Predict term-deposit subscription likelihood and optimize outreach.
+**Purpose:** Predict which customers are most likely to subscribe to a term deposit.
 
-How it works:
+**How it works:**
+1. Default dataset loads, or user uploads their own campaign data.
+2. Three models are trained and evaluated on the data.
+3. A leaderboard shows accuracy, precision, recall, and F1.
+4. User enters a customer profile and picks a model.
+5. Output shows subscription probability and top contributing features.
 
-1. Dataset loads from default source or user upload.
-2. Models are trained/evaluated (LogReg, Decision Tree, Random Forest).
-3. Leaderboard displays accuracy, precision, recall, and F1.
-4. User fills campaign profile form and selects model.
-5. Output includes subscription probability and top feature importance.
+**Business value:** Helps campaign teams focus outreach on high-probability customers.
 
-Business value:
-Improves campaign targeting and conversion efficiency.
+---
 
 ### Tab 7: Deposit Anomaly
 
-Purpose:
-Detect suspicious transaction patterns.
+**Purpose:** Spot suspicious or unusual deposit transactions automatically.
 
-How it works:
+**How it works:**
+1. A hybrid engine combines Isolation Forest scores and reconstruction error.
+2. Live scan lets the user check one transaction and see anomaly reasons.
+3. Batch scanner scores an entire uploaded file and flags risky records.
+4. A risk trend chart tracks how anomaly scores change over time.
 
-1. Hybrid anomaly engine combines Isolation Forest and reconstruction error.
-2. Live scan scores single transactions with reasons.
-3. Batch scanner scores uploaded files and flags anomalous records.
-4. Risk trend chart tracks anomaly score movement over time.
+**Business value:** Early fraud detection before losses grow.
 
-Business value:
-Early warning for fraud and unusual behavior patterns.
+---
 
-### Use Cases:
+### Use Cases
 
 Imagine a small fintech team with three people:
 
@@ -216,49 +215,19 @@ Imagine a small fintech team with three people:
 
 They open Finlytics every morning. Here is how each tab helps them in real life:
 
-1. **Loan Default Risk**
+1. **Loan Default Risk** — Riya checks a new applicant before approval. If the risk is high, she suggests a smaller loan or stricter checks. *"Will this borrower pay back or default?"*
 
-- Riya checks a new applicant before approval.
-- If the risk is high, she can suggest stricter checks or a smaller loan amount.
-- In simple words: this tab answers, **"Will this borrower likely pay back or default?"**
+2. **Borrower Churn** — Arjun finds customers who may not return. He targets them with retention offers. *"Who might stop using us after one loan?"*
 
-2. **Borrower Churn**
+3. **Loan Volume Forecast** — Sara checks how much business is expected next quarter to plan staffing. *"How much lending will we process next?"*
 
-- Arjun checks which customers may never come back for another loan.
-- He targets high-churn users with retention offers.
-- In simple words: this tab answers, **"Who might stop using us after one loan?"**
+4. **Credit Demand by Grade** — Riya reviews demand by risk grade to balance the portfolio. *"Which grade segment will grow next?"*
 
-3. **Loan Volume Forecast**
+5. **Portfolio Intelligence Hub** — The whole team runs stress tests and bulk-scores their portfolio. *"What happens if interest rates spike?"*
 
-- Sara checks how much total lending volume is expected in coming months.
-- She uses this to plan staffing, support load, and funding.
-- In simple words: this tab answers, **"How much business are we likely to process next?"**
+6. **Bank Deposit AI** — Arjun focuses campaign calls on customers most likely to say yes. *"Who will subscribe to our deposit product?"*
 
-4. **Credit Demand by Grade**
-
-- Riya checks demand trends for grade A/B/C/D/E borrowers separately.
-- This helps balance growth and risk by segment.
-- In simple words: this tab answers, **"Which risk grade will request more loans?"**
-
-5. **Portfolio Intelligence Hub**
-
-- The whole team runs "what-if" scenarios like interest-rate shocks or income drops.
-- They upload portfolio CSVs to score risk in bulk, check drift, and export a management brief.
-- In simple words: this tab answers, **"What happens to our portfolio if market conditions change?"**
-
-6. **Bank Deposit AI**
-
-- Arjun uploads campaign data and compares models to predict deposit subscription.
-- He then focuses outreach on customers with higher subscription probability.
-- In simple words: this tab answers, **"Who is most likely to say yes to our deposit campaign?"**
-
-7. **Deposit Anomaly**
-
-- Sara monitors incoming transactions and sees if any deposit pattern looks suspicious.
-- If flagged, the team can review quickly before losses grow.
-- In simple words: this tab answers, **"Does this transaction look unusual or potentially risky?"**
-
-This story-based flow is exactly why Finlytics is useful: each tab solves one practical decision, and together they give a full business control center.
+7. **Deposit Anomaly** — Sara monitors incoming deposits and investigates flagged transactions. *"Does this transaction look suspicious?"*
 
 ---
 
@@ -267,49 +236,63 @@ This story-based flow is exactly why Finlytics is useful: each tab solves one pr
 <table>
   <tr>
     <td align="center" width="50%">
-      <strong>Default Risk Diagnostics</strong><br />
-      <img src="reports/module1_roc_curve.png" alt="Module 1 ROC" width="420" />
+      <strong>Default Risk — ROC Curve</strong><br />
+      <img src="reports/module1_roc_curve.png" alt="Module 1 ROC Curve" width="420" />
     </td>
     <td align="center" width="50%">
-      <strong>Churn Diagnostics</strong><br />
-      <img src="reports/module2_roc_curve.png" alt="Module 2 ROC" width="420" />
+      <strong>Churn — ROC Curve</strong><br />
+      <img src="reports/module2_roc_curve.png" alt="Module 2 ROC Curve" width="420" />
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <strong>Forecasting Results</strong><br />
+      <strong>Loan Volume Forecast</strong><br />
       <img src="reports/module3_forecast.png" alt="Module 3 Forecast" width="420" />
     </td>
     <td align="center" width="50%">
-      <strong>Grade Demand Results</strong><br />
+      <strong>Credit Demand by Grade</strong><br />
       <img src="reports/module4_forecast_by_grade.png" alt="Module 4 Forecast By Grade" width="420" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <strong>Default Risk — SHAP Explainability</strong><br />
+      <img src="reports/module1_shap.png" alt="Module 1 SHAP" width="420" />
+    </td>
+    <td align="center" width="50%">
+      <strong>Grade Demand Heatmap</strong><br />
+      <img src="reports/module4_mape_heatmap.png" alt="Module 4 MAPE Heatmap" width="420" />
     </td>
   </tr>
 </table>
 
-Full diagnostic plots are available in the `reports/` folder.
+All diagnostic plots are available in the `reports/` folder.
 
 ---
 
 ## 7. Project Structure
 
 ```text
-Financial_Predictive_Analytics/
-|- dashboard/
-|  |- app.py
-|- src/
-|  |- data_pipeline.py
-|  |- hackathon_utils.py
-|  |- bank_term_deposit_module.py
-|  |- bank_anomaly_module.py
-|- models/
-|- data/
-|  |- external/
-|  |- raw/
-|  |- processed/
-|- reports/
-|- tests/
-|- requirements.txt
+Finlytics/
+├── dashboard/
+│   └── app.py                        # Streamlit dashboard (7 tabs)
+├── finlytics-frontend/               # Next.js web frontend
+│   └── src/
+├── src/
+│   ├── data_pipeline.py              # Raw data processing
+│   ├── hackathon_utils.py            # Shared ML utilities
+│   ├── bank_term_deposit_module.py   # Deposit subscription module
+│   └── bank_anomaly_module.py        # Anomaly detection module
+├── models/                           # Saved model artifacts
+├── data/
+│   ├── external/                     # External reference data and images
+│   ├── raw/                          # Raw input CSVs
+│   └── processed/                    # Processed/feature-engineered data
+├── reports/                          # Diagnostic charts (PNG)
+├── notebooks/                        # Exploratory notebooks
+├── tests/                            # Unit tests
+├── requirements.txt
+└── requirements.runtime.txt
 ```
 
 ---
@@ -319,25 +302,26 @@ Financial_Predictive_Analytics/
 ### Prerequisites
 
 - Python 3.10 to 3.12
+- Node.js 18+ (only for the Next.js frontend)
 - Git
 
 ### Step 1: Clone
 
 ```bash
-git clone https://github.com/dalaldia5/Financial_Predictive_Analytics.git
-cd Financial_Predictive_Analytics
+git clone https://github.com/DevanshiGoyal/Finlytics.git
+cd Finlytics
 ```
 
 ### Step 2: Virtual Environment
 
-Windows PowerShell:
+**Windows PowerShell:**
 
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-macOS/Linux:
+**macOS/Linux:**
 
 ```bash
 python3 -m venv .venv
@@ -350,80 +334,97 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Windows fallback for long-path/Jupyter install issues:
+**Windows fallback** (if you hit long-path or Jupyter install issues):
 
 ```powershell
 Get-Content requirements.txt | Where-Object { $_ -notmatch '^(jupyter|ipykernel)==' } | Set-Content requirements.runtime.txt
 pip install -r requirements.runtime.txt
 ```
 
-### Step 4: Optional Data Pipeline
+### Step 4: Optional — Run the Data Pipeline
 
-Place this file in `data/raw/`:
+If you have the Lending Club dataset, place it in `data/raw/`:
 
-- accepted_2007_to_2018Q4.csv
+```
+accepted_2007_to_2018Q4.csv
+```
 
-Run pipeline:
+Then run:
 
 ```bash
 python src/data_pipeline.py
 ```
 
-### Step 5: Launch Dashboard
+If you skip this step, the dashboard will use built-in synthetic data automatically.
+
+### Step 5: Launch the Streamlit Dashboard
 
 ```bash
 streamlit run dashboard/app.py
 ```
 
-If port 8501 is occupied:
+If port 8501 is already in use:
 
 ```bash
 streamlit run dashboard/app.py --server.port 8502
 ```
 
+### Step 6: Launch the Next.js Frontend (Optional)
+
+```bash
+cd finlytics-frontend
+npm install
+npm run dev
+```
+
+The frontend will start at `http://localhost:3000`.
+
 ---
 
 ## 9. Usage Examples
 
-### A. Single Prediction Flow
+### A. Single Prediction
 
-1. Open Tab 1 or Tab 2.
-2. Fill in profile fields.
-3. Click predict.
-4. Read probability and decision signal.
+1. Open Tab 1 (Loan Default Risk) or Tab 2 (Borrower Churn).
+2. Fill in the borrower profile form.
+3. Click **Predict**.
+4. Review the probability score and risk label.
 
 ### B. Batch Portfolio Scoring
 
-1. Open Tab 5.
-2. Download sample CSV template.
-3. Upload populated CSV.
-4. Review risk columns and export scored output.
+1. Open Tab 5 (Portfolio Intelligence Hub).
+2. Download the sample CSV template shown on the page.
+3. Fill in your portfolio data and upload the file.
+4. Review the risk scores per row and download the scored output.
 
-### C. Batch Anomaly Scoring
+### C. Batch Anomaly Detection
 
-1. Open Tab 7.
-2. Upload transaction CSV with required columns.
-3. Review flagged share and risk labels.
-4. Download scored anomaly batch.
+1. Open Tab 7 (Deposit Anomaly).
+2. Upload a transaction CSV with the required columns.
+3. Review flagged records and anomaly scores.
+4. Download the labeled batch results.
 
 ---
 
 ## 10. Tech Stack
 
-- Language: Python
-- App: Streamlit
-- Data: pandas, NumPy
-- ML: scikit-learn, XGBoost, imbalanced-learn
-- Forecasting: Prophet
-- Visualization: Matplotlib, seaborn
-- Persistence: joblib
-- Optional AI text generation: OpenAI API key (if configured)
+| Layer          | Technology                                    |
+| -------------- | --------------------------------------------- |
+| Language       | Python 3.10+                                  |
+| Dashboard      | Streamlit                                     |
+| Web Frontend   | Next.js 14, React 18, TypeScript, Tailwind CSS |
+| Data           | pandas, NumPy                                 |
+| ML             | scikit-learn, XGBoost, imbalanced-learn        |
+| Forecasting    | Prophet                                       |
+| Visualization  | Matplotlib, seaborn, Recharts (frontend)      |
+| Model Persistence | joblib                                     |
+| Optional       | OpenAI API (for AI-generated report text)     |
 
 ---
 
 ## 11. Testing
 
-Existing tests cover helper utilities for stress, bank-deposit workflows, and anomaly scoring.
+Unit tests cover core utility functions for stress testing, deposit prediction, and anomaly scoring.
 
 ```bash
 pytest -q
@@ -433,5 +434,6 @@ pytest -q
 
 ## 12. Team and Credits
 
-- Dataset source: Lending Club public loan data (Kaggle workflow).
-- Built as a portfolio + hackathon-ready analytics product.
+- Dataset source: Lending Club public loan data (Kaggle).
+- Built as a portfolio-ready, full-stack financial analytics product.
+- Contributions welcome — open an issue or pull request to get started.
