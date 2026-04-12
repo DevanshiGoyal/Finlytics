@@ -490,10 +490,8 @@ pytest -q
 | Variable | Required | Example | Purpose |
 | -------- | -------- | ------- | ------- |
 | GEMINI_API_KEY | Optional | your_gemini_api_key | Enables Ask Finlytics AI responses |
-| GEMINI_MODEL | Optional | gemini-2.0-flash | Selects Gemini model used by chat endpoint |
 | NEXT_PUBLIC_API_BASE_URL | Optional | http://localhost:3000 | Overrides frontend API base URL |
 | FINLYTICS_PYTHON | Optional | C:/path/to/python.exe | Forces Python interpreter for model bridge |
-| OPENAI_API_KEY | Optional | your_openai_api_key | Enables AI-generated report text when configured |
 
 ---
 
