@@ -23,7 +23,13 @@
 </p>
 
 > [!IMPORTANT]
-> Demo Video: [Watch the Finlytics end-to-end walkthrough](https://www.youtube.com/watch?v=rIvNy6mU9sA)
+> Demo Video: Click the preview below to watch the Finlytics end-to-end walkthrough.
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=rIvNy6mU9sA">
+    <img src="https://img.youtube.com/vi/rIvNy6mU9sA/hqdefault.jpg" alt="Watch the Finlytics demo video" width="760" />
+  </a>
+</p>
 
 ---
 
