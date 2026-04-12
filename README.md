@@ -64,15 +64,9 @@ Imagine a small lending company where one person checks default risk in Excel, a
 
 ## 3. Architecture 
 
-```mermaid
-%%{init: {"flowchart": {"useMaxWidth": false, "diagramPadding": 4, "nodeSpacing": 18, "rankSpacing": 28}}}%%
-flowchart TD
-    A[Input Data - Bank and Lending] --> B[1. Prediction Engine]
-    B --> C[2. Forecasting Layer]
-    C --> D[3. Anomaly Detection]
-    D --> E[4. Explainability and AI Insights]
-    E --> F[5. Streamlit Dashboard]
-```
+<p align="center">
+  <img src="data/external/imgg2.png" alt="Finlytics architecture diagram" width="900" />
+</p>
 
 ### Runtime Architecture
 
