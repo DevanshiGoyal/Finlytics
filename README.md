@@ -106,7 +106,7 @@ flowchart TD
 ### Performance comparison (dashboard values)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/DevanshiGoyal/Finlytics/main/data/external/img1.png" alt="Model performance comparison across modules" width="700" />
+  <img src="data/external/img1.png" alt="Model performance comparison across modules" width="700" />
 </p>
 
 ---
@@ -276,21 +276,21 @@ All diagnostic plots are available in the `reports/` folder.
   <tr>
     <td align="center" width="50%">
       <strong>Dashboard Overview</strong><br />
-      <img src="https://raw.githubusercontent.com/DevanshiGoyal/Finlytics/main/data/external/Screenshot%202026-04-12%20231001.png" alt="Dashboard Overview" width="520" />
+      <img src="data/external/Screenshot%202026-04-12%20231001.png" alt="Dashboard Overview" width="520" />
     </td>
     <td align="center" width="50%">
       <strong>Loan Default Risk</strong><br />
-      <img src="https://raw.githubusercontent.com/DevanshiGoyal/Finlytics/main/data/external/Screenshot%202026-04-12%20231053.png" alt="Loan Default Risk" width="520" />
+      <img src="data/external/Screenshot%202026-04-12%20231053.png" alt="Loan Default Risk" width="520" />
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
       <strong>Borrower Churn</strong><br />
-      <img src="https://raw.githubusercontent.com/DevanshiGoyal/Finlytics/main/data/external/Screenshot%202026-04-12%20231211.png" alt="Borrower Churn" width="520" />
+      <img src="data/external/Screenshot%202026-04-12%20231211.png" alt="Borrower Churn" width="520" />
     </td>
     <td align="center" width="50%">
       <strong>Deposit Anomaly Detection</strong><br />
-      <img src="https://raw.githubusercontent.com/DevanshiGoyal/Finlytics/main/data/external/Screenshot%202026-04-12%20231402.png" alt="Deposit Anomaly Detection" width="520" />
+      <img src="data/external/Screenshot%202026-04-12%20231402.png" alt="Deposit Anomaly Detection" width="520" />
     </td>
   </tr>
 </table>
