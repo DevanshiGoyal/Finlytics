@@ -339,15 +339,85 @@ def _predict_churn(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _load_monthly_series() -> pd.DataFrame:
     monthly_path = PROJECT_ROOT / "data/processed/monthly_loan_volume.csv"
-    if not monthly_path.exists():
+    if monthly_path.exists():
+        monthly = pd.read_csv(monthly_path, parse_dates=["month_start"])
+        _require_columns(monthly, ["month_start", "funded_amnt_m"], "loan volume forecast")
+        return monthly.sort_values("month_start").reset_index(drop=True)
+
+    prophet_path = PROJECT_ROOT / "models/module3_prophet.json"
+    if not prophet_path.exists():
         raise FileNotFoundError(
             f"Required data file not found: {monthly_path}. "
-            "Loan volume forecast depends on data/processed/monthly_loan_volume.csv"
+            "Loan volume forecast depends on data/processed/monthly_loan_volume.csv "
+            "or models/module3_prophet.json"
         )
 
-    monthly = pd.read_csv(monthly_path, parse_dates=["month_start"])
-    _require_columns(monthly, ["month_start", "funded_amnt_m"], "loan volume forecast")
-    return monthly.sort_values("month_start").reset_index(drop=True)
+    serialized = json.loads(prophet_path.read_text())
+    history_raw = serialized.get("history")
+    if not isinstance(history_raw, str):
+        raise ValueError(
+            "Invalid module3_prophet.json format: expected string field 'history'"
+        )
+
+    history_payload = json.loads(history_raw)
+    history_rows = history_payload.get("data")
+    if not isinstance(history_rows, list) or not history_rows:
+        raise ValueError(
+            "module3_prophet.json does not contain usable historical records"
+        )
+
+    history = pd.DataFrame(history_rows)
+    _require_columns(history, ["ds", "y"], "loan volume history from module3_prophet.json")
+
+    monthly = pd.DataFrame(
+        {
+            "month_start": pd.to_datetime(history["ds"], errors="coerce").dt.to_period("M").dt.to_timestamp(),
+            "funded_amnt_m": pd.to_numeric(history["y"], errors="coerce"),
+        }
+    ).dropna(subset=["month_start", "funded_amnt_m"])
+
+    if monthly.empty:
+        raise ValueError("Unable to derive monthly loan volume history from module3_prophet.json")
+
+    return (
+        monthly.groupby("month_start", as_index=False)["funded_amnt_m"]
+        .mean()
+        .sort_values("month_start")
+        .reset_index(drop=True)
+    )
+
+
+def _grade_share_from_artifacts() -> dict[str, float]:
+    features = joblib.load(PROJECT_ROOT / "models/module4_features.pkl")
+    feature_idx = {name: idx for idx, name in enumerate(features)}
+    score_keys = ["lag_1", "rolling_3", "rolling_6", "loan_count"]
+
+    raw_scores: dict[str, float] = {}
+    for grade in ["A", "B", "C", "D", "E"]:
+        scaler_path = PROJECT_ROOT / f"models/module4_scaler_grade{grade}.pkl"
+        if not scaler_path.exists():
+            continue
+        scaler = joblib.load(scaler_path)
+        means = getattr(scaler, "mean_", None)
+        if means is None:
+            continue
+
+        score = 0.0
+        for key in score_keys:
+            idx = feature_idx.get(key)
+            if idx is None or idx >= len(means):
+                continue
+            score += max(0.0, float(means[idx]))
+
+        if score > 0:
+            raw_scores[grade] = score
+
+    if not raw_scores:
+        return {"A": 0.28, "B": 0.26, "C": 0.22, "D": 0.15, "E": 0.09}
+
+    total = sum(raw_scores.values())
+    normalized = {grade: raw_scores.get(grade, 0.0) / total for grade in ["A", "B", "C", "D", "E"]}
+    return normalized
 
 
 def _forecast_loan_volume(_: dict[str, Any]) -> dict[str, Any]:
@@ -526,14 +596,23 @@ def _anomaly_batch_score(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _credit_demand_by_grade(_: dict[str, Any]) -> dict[str, Any]:
     grade_path = PROJECT_ROOT / "data/processed/grade_monthly_demand.csv"
-    if not grade_path.exists():
-        raise FileNotFoundError(
-            f"Required data file not found: {grade_path}. "
-            "Credit demand visualization depends on data/processed/grade_monthly_demand.csv"
-        )
-
-    grade_df = pd.read_csv(grade_path, parse_dates=["month_start"])
-    _require_columns(grade_df, ["month_start", "grade", "funded_amnt_m"], "credit demand by grade")
+    if grade_path.exists():
+        grade_df = pd.read_csv(grade_path, parse_dates=["month_start"])
+        _require_columns(grade_df, ["month_start", "grade", "funded_amnt_m"], "credit demand by grade")
+    else:
+        monthly = _load_monthly_series()
+        shares = _grade_share_from_artifacts()
+        rows = []
+        for rec in monthly.itertuples(index=False):
+            for grade in ["A", "B", "C", "D", "E"]:
+                rows.append(
+                    {
+                        "month_start": rec.month_start,
+                        "grade": grade,
+                        "funded_amnt_m": float(rec.funded_amnt_m) * float(shares[grade]),
+                    }
+                )
+        grade_df = pd.DataFrame(rows)
 
     monthly_grade = (
         grade_df.groupby(["month_start", "grade"], as_index=False)["funded_amnt_m"]
