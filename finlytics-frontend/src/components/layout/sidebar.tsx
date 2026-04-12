@@ -3,7 +3,6 @@
 import {
   Activity,
   BarChart3,
-  BriefcaseBusiness,
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
@@ -26,7 +25,6 @@ const iconMap: Record<string, ComponentType<{ className?: string }>> = {
   "Borrower Churn": UserRoundX,
   "Loan Volume Forecast": TrendingUp,
   "Credit Demand by Grade": BarChart3,
-  "Portfolio Intelligence Hub": BriefcaseBusiness,
   "Bank Deposit AI": WalletCards,
   "Deposit Anomaly Detection": Activity
 };

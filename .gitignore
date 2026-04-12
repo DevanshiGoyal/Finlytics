@@ -30,6 +30,7 @@ models/deposit_anomaly_artifacts.pkl
 
 # Environment variables
 .env
+.env.local
 
 # Node / Next.js artifacts
 node_modules/

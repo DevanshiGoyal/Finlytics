@@ -17,6 +17,13 @@ type ChatMessage = {
   content: string;
 };
 
+type AskFinlyticsResponse = {
+  reply?: string;
+  error?: string;
+  source?: "gemini" | "fallback";
+  model?: string;
+};
+
 const starter: ChatMessage[] = [
   {
     role: "assistant",
@@ -25,35 +32,48 @@ const starter: ChatMessage[] = [
   }
 ];
 
-function createAssistantReply(prompt: string) {
-  const lower = prompt.toLowerCase();
-  if (lower.includes("default")) {
-    return "Default risk has a high concentration in Grade D and E cohorts. Recommend tightening underwriting filters and monitoring DTI > 35%.";
-  }
-  if (lower.includes("churn")) {
-    return "Churn risk rises for low-engagement borrowers with repayment delays. Trigger retention campaign with dynamic refinance offers.";
-  }
-  if (lower.includes("anomaly") || lower.includes("suspicious")) {
-    return "Current anomaly profile shows sharp score spikes around high-value transactions. Increase verification threshold for amount > $15k.";
-  }
-  return "Recommended next action: run Stress Testing tab with +150 bps shock and compare high-risk share before approving new exposure.";
-}
+const DEFAULT_REPLY =
+  "Recommended next action: run the Stress Testing scenario with +150 bps shock and compare high-risk share before approving new exposure.";
 
 export function AIAssistantPanel({ open, onClose }: AIAssistantPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(starter);
   const [prompt, setPrompt] = useState("");
+  const [sending, setSending] = useState(false);
 
   const placeholder = useMemo(() => "Ask: Which cohort drives today’s risk spike?", []);
 
-  const submit = () => {
+  const submit = async () => {
     const trimmed = prompt.trim();
-    if (!trimmed) {
+    if (!trimmed || sending) {
       return;
     }
+
     const userMessage: ChatMessage = { role: "user", content: trimmed };
-    const assistant: ChatMessage = { role: "assistant", content: createAssistantReply(trimmed) };
-    setMessages((prev) => [...prev, userMessage, assistant]);
+    setMessages((prev) => [...prev, userMessage]);
     setPrompt("");
+
+    setSending(true);
+    try {
+      const response = await fetch("/chat/ask", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ message: trimmed })
+      });
+
+      const payload = (await response.json()) as AskFinlyticsResponse;
+      const baseContent = payload.reply?.trim() || DEFAULT_REPLY;
+      const assistantContent =
+        payload.source === "fallback"
+          ? `${baseContent}\n\n(Using fallback mode while Gemini is temporarily unavailable.)`
+          : baseContent;
+      setMessages((prev) => [...prev, { role: "assistant", content: assistantContent }]);
+    } catch {
+      setMessages((prev) => [...prev, { role: "assistant", content: DEFAULT_REPLY }]);
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -90,6 +110,12 @@ export function AIAssistantPanel({ open, onClose }: AIAssistantPanelProps) {
                 {message.content}
               </div>
             ))}
+            {sending ? (
+              <div className="max-w-[90%] rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">
+                <Sparkles className="mb-1 h-3.5 w-3.5" />
+                Thinking...
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-3 flex items-center gap-2">
@@ -97,13 +123,14 @@ export function AIAssistantPanel({ open, onClose }: AIAssistantPanelProps) {
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
               placeholder={placeholder}
+              disabled={sending}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
-                  submit();
+                  void submit();
                 }
               }}
             />
-            <Button size="sm" onClick={submit}>
+            <Button size="sm" onClick={() => void submit()} disabled={sending}>
               <SendHorizontal className="h-4 w-4" />
             </Button>
           </div>

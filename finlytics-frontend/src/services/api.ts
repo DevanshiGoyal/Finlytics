@@ -63,18 +63,6 @@ export interface LoanForecastResponse {
   }>;
 }
 
-export interface PortfolioBatchScoreResponse {
-  rows: Array<{
-    id: string;
-    borrower: string;
-    defaultRisk: number;
-    churnRisk: number;
-    riskBand: string;
-  }>;
-  featureImportance: FeatureImportance;
-  drift: Array<{ feature: string; status: string; drift_score?: number }>;
-}
-
 export interface AnomalyDetectResponse {
   score: number;
   label: string;
@@ -124,13 +112,6 @@ export async function predictChurn(payload: JsonBody) {
 export async function getLoanVolumeForecast() {
   return request<LoanForecastResponse>("/forecast/loan-volume", {
     method: "GET"
-  });
-}
-
-export async function batchScorePortfolio(payload: JsonBody) {
-  return request<PortfolioBatchScoreResponse>("/portfolio/batch-score", {
-    method: "POST",
-    body: JSON.stringify(payload)
   });
 }
 
