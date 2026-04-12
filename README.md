@@ -23,11 +23,15 @@
 </p>
 
 > [!IMPORTANT]
-> Demo Video: Click the preview below to watch the Finlytics end-to-end walkthrough.
+> Demo Video: Embedded-style preview (click to play on YouTube).
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=rIvNy6mU9sA">
-    <img src="https://img.youtube.com/vi/rIvNy6mU9sA/hqdefault.jpg" alt="Watch the Finlytics demo video" width="760" />
+    <img src="https://img.youtube.com/vi/rIvNy6mU9sA/maxresdefault.jpg" alt="Watch the Finlytics demo video" width="900" />
+  </a>
+  <br />
+  <a href="https://www.youtube.com/watch?v=rIvNy6mU9sA">
+    <img src="https://img.shields.io/badge/%E2%96%B6%20Play%20Demo%20On%20YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Play Demo on YouTube" />
   </a>
 </p>
 
@@ -506,4 +510,4 @@ This project is released under the Apache License 2.0 in compliance with the Nat
 | Dia Dalal | @dalaldia5 |
 | Neelima Singh | @neelima-singh07 |
 | Devanshi Goyal | @DevanshiGoyal |
-| Mehak Taneja | @mehak-taneja |
+| Mehak Taneja | @mehak2807 |
