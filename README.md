@@ -12,7 +12,7 @@
 </p>
 
 > [!IMPORTANT]
-> Demo Video: [Watch the Finlytics end-to-end walkthrough](https://your-demo-video-link-here)
+> Demo Video: [Watch the Finlytics end-to-end walkthrough](https://youtu.be/rIvNy6mU9sA)
 
 ---
 
