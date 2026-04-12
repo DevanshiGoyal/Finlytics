@@ -1,5 +1,16 @@
 ﻿# Finlytics - Financial Predictive Analytics
 
+## NatWest Code for Purpose Hackathon 2026
+
+**Team Name:** CodeX_
+
+**Team Members**
+
+1. Dia Dalal
+2. Neelima Singh
+3. Devanshi Goyal
+4. Mehak Taneja
+
 <p align="center">
   <strong>From raw banking data to decision-ready AI insights in one Streamlit experience.</strong>
 </p>
@@ -12,13 +23,22 @@
 </p>
 
 > [!IMPORTANT]
-> Demo Video: [Watch the Finlytics end-to-end walkthrough](https://youtu.be/rIvNy6mU9sA)
+> Demo Video: [Watch the Finlytics end-to-end walkthrough](https://www.youtube.com/watch?v=rIvNy6mU9sA)
 
 ---
 
 ## 1. Overview
 
 Imagine a small lending company where one person checks default risk in Excel, another tracks churn in a notebook, and another watches suspicious deposits in a separate tool. Every decision is slow because information is scattered. Finlytics solves this simple problem: **bring all key financial decisions into one easy dashboard** so teams can act faster and with more confidence. People use it because it saves time, reduces guesswork, and turns raw model outputs into clear actions they can understand—even if they are not ML experts.
+
+## Intended Users
+
+- Credit Risk Analysts and Underwriters who need faster default-risk decisions.
+- Portfolio Managers and Risk Committees who review overall portfolio health and stress scenarios.
+- Marketing and Retention Teams who need churn signals and deposit-campaign targeting.
+- Operations Managers who plan staffing and capacity from loan-volume forecasts.
+- Fraud and Compliance Teams who monitor anomalous deposit behavior.
+- Product, Data, and Analytics Teams who compare model behavior and explainability outputs.
 
 ---
 
@@ -250,6 +270,33 @@ All diagnostic plots are available in the `reports/` folder.
 
 ---
 
+## 6.1 Preview of Website
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <strong>Dashboard Overview</strong><br />
+      <img src="https://raw.githubusercontent.com/DevanshiGoyal/Finlytics/main/data/external/Screenshot%202026-04-12%20231001.png" alt="Dashboard Overview" width="520" />
+    </td>
+    <td align="center" width="50%">
+      <strong>Loan Default Risk</strong><br />
+      <img src="https://raw.githubusercontent.com/DevanshiGoyal/Finlytics/main/data/external/Screenshot%202026-04-12%20231053.png" alt="Loan Default Risk" width="520" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <strong>Borrower Churn</strong><br />
+      <img src="https://raw.githubusercontent.com/DevanshiGoyal/Finlytics/main/data/external/Screenshot%202026-04-12%20231211.png" alt="Borrower Churn" width="520" />
+    </td>
+    <td align="center" width="50%">
+      <strong>Deposit Anomaly Detection</strong><br />
+      <img src="https://raw.githubusercontent.com/DevanshiGoyal/Finlytics/main/data/external/Screenshot%202026-04-12%20231402.png" alt="Deposit Anomaly Detection" width="520" />
+    </td>
+  </tr>
+</table>
+
+---
+
 
 ## 7. Project Structure
 
@@ -387,17 +434,17 @@ The frontend will start at http://localhost:3000.
 
 ## 10. Tech Stack
 
-| Layer | Technology |
-| ----- | ---------- |
-| Language | Python 3.10+ |
-| Dashboard | Streamlit |
-| Web Frontend | Next.js 14, React 18, TypeScript, Tailwind CSS |
-| Data | pandas, NumPy |
-| ML | scikit-learn, XGBoost, imbalanced-learn |
-| Forecasting | Prophet |
-| Visualization | Matplotlib, seaborn, Recharts (frontend) |
-| Model Persistence | joblib |
-| Optional | OpenAI API (for AI-generated report text) |
+| Layer | Technology | Purpose |
+| ----- | ---------- | ------- |
+| Language | Python 3.10+ | Core language for data processing, modeling, and backend analytics logic |
+| Dashboard | Streamlit | Build and run the interactive analytics dashboard |
+| Web Frontend | Next.js 14, React 18, TypeScript, Tailwind CSS | Provide modern web UI for feature modules and user workflows |
+| Data | pandas, NumPy | Data wrangling, transformations, and numeric computation |
+| ML | scikit-learn, XGBoost, imbalanced-learn | Classification/regression pipelines and imbalanced-data handling |
+| Forecasting | Prophet | Time-series forecasting for forward demand and volume projections |
+| Visualization | Matplotlib, seaborn, Recharts (frontend) | Plot diagnostics, trends, and KPI charts across backend and frontend |
+| Model Persistence | joblib | Save and load trained model artifacts efficiently |
+| Optional | OpenAI API (for AI-generated report text) | Generate narrative summary text for executive-style reporting |
 
 ---
 
@@ -414,4 +461,43 @@ pytest -q
 ## 12. Team and Credits
 
 - Dataset source: Lending Club public loan data (Kaggle).
-- By CodeX_
+- Team: CodeX_
+
+---
+
+## 13. Future Improvements
+
+1. Add role-based authentication and audit trails for secure multi-user usage.
+2. Add continuous model monitoring for drift, calibration, and data quality checks.
+3. Automate retraining pipelines with scheduled jobs and versioned model releases.
+4. Expand explainability with deeper local narratives and counterfactual insights.
+5. Add one-click export for executive decks (PDF/PPT) and stakeholder summaries.
+
+---
+
+## 14. Environment Variables
+
+| Variable | Required | Example | Purpose |
+| -------- | -------- | ------- | ------- |
+| GEMINI_API_KEY | Optional | your_gemini_api_key | Enables Ask Finlytics AI responses |
+| GEMINI_MODEL | Optional | gemini-2.0-flash | Selects Gemini model used by chat endpoint |
+| NEXT_PUBLIC_API_BASE_URL | Optional | http://localhost:3000 | Overrides frontend API base URL |
+| FINLYTICS_PYTHON | Optional | C:/path/to/python.exe | Forces Python interpreter for model bridge |
+| OPENAI_API_KEY | Optional | your_openai_api_key | Enables AI-generated report text when configured |
+
+---
+
+## 15. License
+
+This project is released under the Apache License 2.0 in compliance with the NatWest Code for Purpose Hackathon requirements.
+
+---
+
+## 16. Authors
+
+| Name | GitHub |
+| ---- | ------ |
+| Dia Dalal | @dalaldia5 |
+| Neelima Singh | @neelima-singh07 |
+| Devanshi Goyal | @DevanshiGoyal |
+| Mehak Taneja | @mehak-taneja |
