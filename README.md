@@ -243,16 +243,7 @@ They open Finlytics every morning. Here is how each tab helps them in real life:
       <img src="https://raw.githubusercontent.com/DevanshiGoyal/Finlytics/main/reports/module4_forecast_by_grade.png" alt="Module 4 Forecast By Grade" width="420" />
     </td>
   </tr>
-  <tr>
-    <td align="center" width="50%">
-      <strong>Default Risk - SHAP Explainability</strong><br />
-      <img src="https://raw.githubusercontent.com/DevanshiGoyal/Finlytics/main/reports/module1_shap.png" alt="Module 1 SHAP" width="420" />
-    </td>
-    <td align="center" width="50%">
-      <strong>Grade Demand Heatmap</strong><br />
-      <img src="https://raw.githubusercontent.com/DevanshiGoyal/Finlytics/main/reports/module4_mape_heatmap.png" alt="Module 4 MAPE Heatmap" width="420" />
-    </td>
-  </tr>
+  
 </table>
 
 All diagnostic plots are available in the `reports/` folder.
