@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { AnomalyTrendChart } from "@/components/charts/anomaly-trend-chart";
+import { ShapWaterfallChart } from "@/components/charts/shap-waterfall-chart";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,12 @@ import { Card } from "@/components/ui/card";
 import { FileUpload } from "@/components/ui/file-upload";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/table";
-import { detectAnomaly, getAnomalyTimeseries, scoreAnomalyBatch } from "@/services/api";
+import {
+  detectAnomaly,
+  getAnomalyTimeseries,
+  scoreAnomalyBatch,
+} from "@/services/api";
+import type { ShapExplanationResponse } from "@/services/api";
 
 function parseCsv(file: File): Promise<Array<Record<string, string>>> {
   return new Promise((resolve, reject) => {
@@ -35,11 +41,22 @@ function parseCsv(file: File): Promise<Array<Record<string, string>>> {
 }
 
 export default function DepositAnomalyDetectionPage() {
-  const [form, setForm] = useState({ amount: "7500", hour: "10", dayOfWeek: "2", frequency: "3" });
+  const [form, setForm] = useState({
+    amount: "7500",
+    hour: "10",
+    dayOfWeek: "2",
+    frequency: "3",
+  });
   const [score, setScore] = useState<number | null>(null);
   const [label, setLabel] = useState<string>("");
-  const [trend, setTrend] = useState<Array<{ time: string; score: number }>>([]);
-  const [batchRows, setBatchRows] = useState<Array<{ txId: string; amount: number; score: number; label: string }>>([]);
+  const [shapExplanation, setShapExplanation] =
+    useState<ShapExplanationResponse | null>(null);
+  const [trend, setTrend] = useState<Array<{ time: string; score: number }>>(
+    [],
+  );
+  const [batchRows, setBatchRows] = useState<
+    Array<{ txId: string; amount: number; score: number; label: string }>
+  >([]);
 
   useEffect(() => {
     const load = async () => {
@@ -48,7 +65,9 @@ export default function DepositAnomalyDetectionPage() {
         setTrend(result.trend);
         setBatchRows(result.batch);
       } catch {
-        toast.error("Unable to load anomaly timeline from repository resources");
+        toast.error(
+          "Unable to load anomaly timeline from repository resources",
+        );
       }
     };
     void load();
@@ -59,10 +78,11 @@ export default function DepositAnomalyDetectionPage() {
       amount: Number(form.amount),
       hour: Number(form.hour),
       dayOfWeek: Number(form.dayOfWeek),
-      frequency: Number(form.frequency)
+      frequency: Number(form.frequency),
     });
     setScore(response.score);
     setLabel(response.label);
+    setShapExplanation(response.shapExplanation ?? null);
     toast.success("Live transaction scored");
   };
 
@@ -76,30 +96,60 @@ export default function DepositAnomalyDetectionPage() {
 
       <div className="grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          <h3 className="text-lg font-semibold text-white">Live Transaction Input</h3>
+          <h3 className="text-lg font-semibold text-white">
+            Live Transaction Input
+          </h3>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Amount</label>
-              <Input value={form.amount} type="number" onChange={(event) => setForm((prev) => ({ ...prev, amount: event.target.value }))} />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-slate-400">Hour</label>
-              <Input value={form.hour} type="number" onChange={(event) => setForm((prev) => ({ ...prev, hour: event.target.value }))} />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-slate-400">Day of Week</label>
+              <label className="mb-1 block text-xs text-slate-400">
+                Amount
+              </label>
               <Input
-                value={form.dayOfWeek}
+                value={form.amount}
                 type="number"
-                onChange={(event) => setForm((prev) => ({ ...prev, dayOfWeek: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, amount: event.target.value }))
+                }
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Frequency (24h)</label>
+              <label className="mb-1 block text-xs text-slate-400">Hour</label>
+              <Input
+                value={form.hour}
+                type="number"
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, hour: event.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">
+                Day of Week
+              </label>
+              <Input
+                value={form.dayOfWeek}
+                type="number"
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    dayOfWeek: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">
+                Frequency (24h)
+              </label>
               <Input
                 value={form.frequency}
                 type="number"
-                onChange={(event) => setForm((prev) => ({ ...prev, frequency: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    frequency: event.target.value,
+                  }))
+                }
               />
             </div>
           </div>
@@ -112,23 +162,64 @@ export default function DepositAnomalyDetectionPage() {
           <h3 className="text-lg font-semibold text-white">Anomaly Output</h3>
           {score !== null ? (
             <div className="mt-4 space-y-3">
-              <p className="text-5xl font-bold text-amber-200">{(score * 100).toFixed(1)}%</p>
-              <Badge variant={label === "Suspicious" ? "danger" : "success"}>{label}</Badge>
-              <p className="text-xs text-slate-400">Threshold for suspicious label: 65%</p>
+              <p className="text-5xl font-bold text-amber-200">
+                {(score * 100).toFixed(1)}%
+              </p>
+              <Badge variant={label === "Suspicious" ? "danger" : "success"}>
+                {label}
+              </Badge>
+              <p className="text-xs text-slate-400">
+                Threshold for suspicious label: 65%
+              </p>
             </div>
           ) : (
-            <p className="mt-3 text-sm text-slate-400">Run live scan to generate anomaly score.</p>
+            <p className="mt-3 text-sm text-slate-400">
+              Run live scan to generate anomaly score.
+            </p>
           )}
         </Card>
       </div>
 
       <Card>
-        <h3 className="mb-3 text-lg font-semibold text-white">Anomaly Score Timeline</h3>
+        <h3 className="mb-3 text-lg font-semibold text-white">
+          Anomaly Score Timeline
+        </h3>
         <AnomalyTrendChart data={trend} />
       </Card>
 
+      <Card>
+        <h3 className="text-lg font-semibold text-white">
+          SHAP Waterfall Explanation
+        </h3>
+        <p className="mt-1 text-sm text-slate-400">
+          Feature-level additive impact for this anomaly score.
+        </p>
+        <div className="mt-4">
+          {shapExplanation?.available && shapExplanation.baseValue != null ? (
+            <ShapWaterfallChart
+              points={shapExplanation.points}
+              baseValue={shapExplanation.baseValue}
+              modelOutput={shapExplanation.modelOutput}
+            />
+          ) : null}
+          {score !== null && !shapExplanation?.available ? (
+            <p className="rounded-xl border border-amber-300/20 bg-amber-500/10 p-4 text-sm text-amber-100">
+              {shapExplanation?.message ||
+                "SHAP explanation is unavailable for this environment."}
+            </p>
+          ) : null}
+          {score === null ? (
+            <p className="rounded-xl border border-dashed border-white/20 bg-slate-900/30 p-6 text-sm text-slate-400">
+              Run a live anomaly scan to populate SHAP explanation.
+            </p>
+          ) : null}
+        </div>
+      </Card>
+
       <Card className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">Batch Upload + Results</h3>
+        <h3 className="text-lg font-semibold text-white">
+          Batch Upload + Results
+        </h3>
         <FileUpload
           title="Upload anomaly batch CSV"
           onFileSelect={async (file) => {
@@ -142,7 +233,8 @@ export default function DepositAnomalyDetectionPage() {
               setBatchRows(result.batch);
               toast.success("Batch scored successfully");
             } catch (error) {
-              const message = error instanceof Error ? error.message : "Batch scoring failed";
+              const message =
+                error instanceof Error ? error.message : "Batch scoring failed";
               toast.error(message);
             }
           }}
@@ -155,15 +247,17 @@ export default function DepositAnomalyDetectionPage() {
             {
               key: "score",
               header: "Anomaly Score",
-              render: (value) => `${(Number(value) * 100).toFixed(1)}%`
+              render: (value) => `${(Number(value) * 100).toFixed(1)}%`,
             },
             {
               key: "label",
               header: "Label",
               render: (value) => (
-                <Badge variant={value === "Suspicious" ? "danger" : "success"}>{String(value)}</Badge>
-              )
-            }
+                <Badge variant={value === "Suspicious" ? "danger" : "success"}>
+                  {String(value)}
+                </Badge>
+              ),
+            },
           ]}
           data={batchRows}
         />

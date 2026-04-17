@@ -7,8 +7,8 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     ...options,
     headers: {
       "Content-Type": "application/json",
-      ...(options?.headers || {})
-    }
+      ...(options?.headers || {}),
+    },
   });
 
   if (!response.ok) {
@@ -19,6 +19,22 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 }
 
 export type FeatureImportance = Array<{ feature: string; importance: number }>;
+
+export interface ShapWaterfallPoint {
+  feature: string;
+  value: number;
+  shapValue: number;
+  start: number;
+  end: number;
+}
+
+export interface ShapExplanationResponse {
+  available: boolean;
+  message: string | null;
+  baseValue: number | null;
+  modelOutput: number | null;
+  points: ShapWaterfallPoint[];
+}
 
 export interface DepositLeaderboardResponse {
   leaderboard: Array<{
@@ -37,12 +53,14 @@ export interface DepositPredictionResponse {
   label: string;
   prediction: number;
   model: string;
+  shapExplanation?: ShapExplanationResponse;
 }
 
 export interface DefaultPredictionResponse {
   probability: number;
   label: string;
   explainability: FeatureImportance;
+  shapExplanation?: ShapExplanationResponse;
 }
 
 export interface ChurnPredictionResponse {
@@ -50,6 +68,7 @@ export interface ChurnPredictionResponse {
   label: string;
   suggestions: string[];
   explainability: FeatureImportance;
+  shapExplanation?: ShapExplanationResponse;
 }
 
 export interface LoanForecastResponse {
@@ -66,6 +85,7 @@ export interface LoanForecastResponse {
 export interface AnomalyDetectResponse {
   score: number;
   label: string;
+  shapExplanation?: ShapExplanationResponse;
 }
 
 export interface AnomalyTimeseriesResponse {
@@ -78,65 +98,72 @@ export interface AnomalyBatchScoreResponse {
 }
 
 export interface CreditDemandByGradeResponse {
-  trend: Array<{ month: string; A: number; B: number; C: number; D: number; E: number }>;
+  trend: Array<{
+    month: string;
+    A: number;
+    B: number;
+    C: number;
+    D: number;
+    E: number;
+  }>;
   heatmap: Array<{ grade: string; values: number[] }>;
 }
 
 export async function getDepositLeaderboard() {
   return request<DepositLeaderboardResponse>("/deposit/leaderboard", {
-    method: "GET"
+    method: "GET",
   });
 }
 
 export async function predictDeposit(payload: JsonBody) {
   return request<DepositPredictionResponse>("/deposit/predict", {
     method: "POST",
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   });
 }
 
 export async function predictDefault(payload: JsonBody) {
   return request<DefaultPredictionResponse>("/predict/default", {
     method: "POST",
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   });
 }
 
 export async function predictChurn(payload: JsonBody) {
   return request<ChurnPredictionResponse>("/predict/churn", {
     method: "POST",
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   });
 }
 
 export async function getLoanVolumeForecast() {
   return request<LoanForecastResponse>("/forecast/loan-volume", {
-    method: "GET"
+    method: "GET",
   });
 }
 
 export async function detectAnomaly(payload: JsonBody) {
   return request<AnomalyDetectResponse>("/anomaly/detect", {
     method: "POST",
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   });
 }
 
 export async function getAnomalyTimeseries() {
   return request<AnomalyTimeseriesResponse>("/anomaly/timeseries", {
-    method: "GET"
+    method: "GET",
   });
 }
 
 export async function scoreAnomalyBatch(payload: JsonBody) {
   return request<AnomalyBatchScoreResponse>("/anomaly/batch-score", {
     method: "POST",
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   });
 }
 
 export async function getCreditDemandByGrade() {
   return request<CreditDemandByGradeResponse>("/credit-demand/by-grade", {
-    method: "GET"
+    method: "GET",
   });
 }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { FeatureImportanceChart } from "@/components/charts/feature-importance-chart";
+import { ShapWaterfallChart } from "@/components/charts/shap-waterfall-chart";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,20 +13,25 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/table";
 import { getDepositLeaderboard, predictDeposit } from "@/services/api";
+import type { DepositPredictionResponse } from "@/services/api";
 
 function toPercent(value: number) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
 export default function BankDepositAIPage() {
-  const [leaderboard, setLeaderboard] = useState<Array<{
-    model: string;
-    accuracy: number;
-    precision: number;
-    recall: number;
-    f1: number;
-  }>>([]);
-  const [featureImportance, setFeatureImportance] = useState<Array<{ feature: string; importance: number }>>([]);
+  const [leaderboard, setLeaderboard] = useState<
+    Array<{
+      model: string;
+      accuracy: number;
+      precision: number;
+      recall: number;
+      f1: number;
+    }>
+  >([]);
+  const [featureImportance, setFeatureImportance] = useState<
+    Array<{ feature: string; importance: number }>
+  >([]);
   const [model, setModel] = useState("");
   const [form, setForm] = useState({
     age: "36",
@@ -43,9 +49,10 @@ export default function BankDepositAIPage() {
     campaign: "2",
     pdays: "40",
     previous: "1",
-    poutcome: "failure"
+    poutcome: "failure",
   });
-  const [probability, setProbability] = useState<number | null>(null);
+  const [prediction, setPrediction] =
+    useState<DepositPredictionResponse | null>(null);
   const [isPredicting, setIsPredicting] = useState(false);
 
   useEffect(() => {
@@ -57,12 +64,17 @@ export default function BankDepositAIPage() {
         }
         if (Array.isArray(data.leaderboard) && data.leaderboard.length > 0) {
           setLeaderboard(data.leaderboard);
-          const best = data.bestModel && data.leaderboard.some((item) => item.model === data.bestModel)
-            ? data.bestModel
-            : data.leaderboard[0].model;
+          const best =
+            data.bestModel &&
+            data.leaderboard.some((item) => item.model === data.bestModel)
+              ? data.bestModel
+              : data.leaderboard[0].model;
           setModel(best);
         }
-        if (Array.isArray(data.featureImportance) && data.featureImportance.length > 0) {
+        if (
+          Array.isArray(data.featureImportance) &&
+          data.featureImportance.length > 0
+        ) {
           setFeatureImportance(data.featureImportance);
         }
       })
@@ -75,12 +87,17 @@ export default function BankDepositAIPage() {
     };
   }, []);
 
-  const selectedModel = useMemo(() => leaderboard.find((item) => item.model === model), [leaderboard, model]);
+  const selectedModel = useMemo(
+    () => leaderboard.find((item) => item.model === model),
+    [leaderboard, model],
+  );
 
   const runPrediction = async () => {
     try {
       if (!model) {
-        toast.error("No model available. Ensure leaderboard endpoint is healthy.");
+        toast.error(
+          "No model available. Ensure leaderboard endpoint is healthy.",
+        );
         return;
       }
       setIsPredicting(true);
@@ -101,9 +118,9 @@ export default function BankDepositAIPage() {
         campaign: Number(form.campaign),
         pdays: Number(form.pdays),
         previous: Number(form.previous),
-        poutcome: form.poutcome
+        poutcome: form.poutcome,
       });
-      setProbability(result.probability);
+      setPrediction(result);
       toast.success("Deposit subscription score generated");
     } catch {
       toast.error("Unable to generate score right now");
@@ -125,10 +142,26 @@ export default function BankDepositAIPage() {
         <DataTable
           columns={[
             { key: "model", header: "Model" },
-            { key: "accuracy", header: "Accuracy", render: (value) => toPercent(Number(value)) },
-            { key: "precision", header: "Precision", render: (value) => toPercent(Number(value)) },
-            { key: "recall", header: "Recall", render: (value) => toPercent(Number(value)) },
-            { key: "f1", header: "F1", render: (value) => toPercent(Number(value)) }
+            {
+              key: "accuracy",
+              header: "Accuracy",
+              render: (value) => toPercent(Number(value)),
+            },
+            {
+              key: "precision",
+              header: "Precision",
+              render: (value) => toPercent(Number(value)),
+            },
+            {
+              key: "recall",
+              header: "Recall",
+              render: (value) => toPercent(Number(value)),
+            },
+            {
+              key: "f1",
+              header: "F1",
+              render: (value) => toPercent(Number(value)),
+            },
           ]}
           data={leaderboard}
         />
@@ -136,63 +169,118 @@ export default function BankDepositAIPage() {
 
       <div className="grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          <h3 className="text-lg font-semibold text-white">Prediction Console</h3>
+          <h3 className="text-lg font-semibold text-white">
+            Prediction Console
+          </h3>
           <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Model Selector</label>
+              <label className="mb-1 block text-xs text-slate-400">
+                Model Selector
+              </label>
               <Select
                 value={model}
                 onChange={(event) => setModel(event.target.value)}
-                options={leaderboard.map((item) => ({ label: item.model, value: item.model }))}
+                options={leaderboard.map((item) => ({
+                  label: item.model,
+                  value: item.model,
+                }))}
               />
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-400">Age</label>
-              <Input type="number" value={form.age} onChange={(event) => setForm((prev) => ({ ...prev, age: event.target.value }))} />
+              <Input
+                type="number"
+                value={form.age}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, age: event.target.value }))
+                }
+              />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Days since previous contact</label>
-              <Input type="number" value={form.pdays} onChange={(event) => setForm((prev) => ({ ...prev, pdays: event.target.value }))} />
+              <label className="mb-1 block text-xs text-slate-400">
+                Days since previous contact
+              </label>
+              <Input
+                type="number"
+                value={form.pdays}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, pdays: event.target.value }))
+                }
+              />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Credit default</label>
+              <label className="mb-1 block text-xs text-slate-400">
+                Credit default
+              </label>
               <Select
                 value={form.default}
-                onChange={(event) => setForm((prev) => ({ ...prev, default: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, default: event.target.value }))
+                }
                 options={[
                   { label: "no", value: "no" },
-                  { label: "yes", value: "yes" }
+                  { label: "yes", value: "yes" },
                 ]}
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Balance</label>
-              <Input type="number" value={form.balance} onChange={(event) => setForm((prev) => ({ ...prev, balance: event.target.value }))} />
+              <label className="mb-1 block text-xs text-slate-400">
+                Balance
+              </label>
+              <Input
+                type="number"
+                value={form.balance}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, balance: event.target.value }))
+                }
+              />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Previous contacts</label>
-              <Input type="number" value={form.previous} onChange={(event) => setForm((prev) => ({ ...prev, previous: event.target.value }))} />
+              <label className="mb-1 block text-xs text-slate-400">
+                Previous contacts
+              </label>
+              <Input
+                type="number"
+                value={form.previous}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, previous: event.target.value }))
+                }
+              />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Housing loan</label>
+              <label className="mb-1 block text-xs text-slate-400">
+                Housing loan
+              </label>
               <Select
                 value={form.housing}
-                onChange={(event) => setForm((prev) => ({ ...prev, housing: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, housing: event.target.value }))
+                }
                 options={[
                   { label: "no", value: "no" },
-                  { label: "yes", value: "yes" }
+                  { label: "yes", value: "yes" },
                 ]}
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Call Duration (sec)</label>
-              <Input type="number" value={form.duration} onChange={(event) => setForm((prev) => ({ ...prev, duration: event.target.value }))} />
+              <label className="mb-1 block text-xs text-slate-400">
+                Call Duration (sec)
+              </label>
+              <Input
+                type="number"
+                value={form.duration}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, duration: event.target.value }))
+                }
+              />
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-400">Job</label>
               <Select
                 value={form.job}
-                onChange={(event) => setForm((prev) => ({ ...prev, job: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, job: event.target.value }))
+                }
                 options={[
                   { label: "admin.", value: "admin." },
                   { label: "blue-collar", value: "blue-collar" },
@@ -205,67 +293,98 @@ export default function BankDepositAIPage() {
                   { label: "student", value: "student" },
                   { label: "technician", value: "technician" },
                   { label: "unemployed", value: "unemployed" },
-                  { label: "unknown", value: "unknown" }
+                  { label: "unknown", value: "unknown" },
                 ]}
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Personal loan</label>
+              <label className="mb-1 block text-xs text-slate-400">
+                Personal loan
+              </label>
               <Select
                 value={form.loan}
-                onChange={(event) => setForm((prev) => ({ ...prev, loan: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, loan: event.target.value }))
+                }
                 options={[
                   { label: "no", value: "no" },
-                  { label: "yes", value: "yes" }
+                  { label: "yes", value: "yes" },
                 ]}
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Contact type</label>
+              <label className="mb-1 block text-xs text-slate-400">
+                Contact type
+              </label>
               <Select
                 value={form.contact}
-                onChange={(event) => setForm((prev) => ({ ...prev, contact: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, contact: event.target.value }))
+                }
                 options={[
                   { label: "cellular", value: "cellular" },
                   { label: "telephone", value: "telephone" },
-                  { label: "unknown", value: "unknown" }
+                  { label: "unknown", value: "unknown" },
                 ]}
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Last contact day</label>
-              <Input type="number" value={form.day} onChange={(event) => setForm((prev) => ({ ...prev, day: event.target.value }))} />
+              <label className="mb-1 block text-xs text-slate-400">
+                Last contact day
+              </label>
+              <Input
+                type="number"
+                value={form.day}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, day: event.target.value }))
+                }
+              />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Marital</label>
+              <label className="mb-1 block text-xs text-slate-400">
+                Marital
+              </label>
               <Select
                 value={form.marital}
-                onChange={(event) => setForm((prev) => ({ ...prev, marital: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, marital: event.target.value }))
+                }
                 options={[
                   { label: "single", value: "single" },
                   { label: "married", value: "married" },
-                  { label: "divorced", value: "divorced" }
+                  { label: "divorced", value: "divorced" },
                 ]}
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Education</label>
+              <label className="mb-1 block text-xs text-slate-400">
+                Education
+              </label>
               <Select
                 value={form.education}
-                onChange={(event) => setForm((prev) => ({ ...prev, education: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    education: event.target.value,
+                  }))
+                }
                 options={[
                   { label: "primary", value: "primary" },
                   { label: "secondary", value: "secondary" },
                   { label: "tertiary", value: "tertiary" },
-                  { label: "unknown", value: "unknown" }
+                  { label: "unknown", value: "unknown" },
                 ]}
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Last contact month</label>
+              <label className="mb-1 block text-xs text-slate-400">
+                Last contact month
+              </label>
               <Select
                 value={form.month}
-                onChange={(event) => setForm((prev) => ({ ...prev, month: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, month: event.target.value }))
+                }
                 options={[
                   { label: "jan", value: "jan" },
                   { label: "feb", value: "feb" },
@@ -278,24 +397,36 @@ export default function BankDepositAIPage() {
                   { label: "sep", value: "sep" },
                   { label: "oct", value: "oct" },
                   { label: "nov", value: "nov" },
-                  { label: "dec", value: "dec" }
+                  { label: "dec", value: "dec" },
                 ]}
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Campaign Contacts</label>
-              <Input type="number" value={form.campaign} onChange={(event) => setForm((prev) => ({ ...prev, campaign: event.target.value }))} />
+              <label className="mb-1 block text-xs text-slate-400">
+                Campaign Contacts
+              </label>
+              <Input
+                type="number"
+                value={form.campaign}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, campaign: event.target.value }))
+                }
+              />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Previous outcome</label>
+              <label className="mb-1 block text-xs text-slate-400">
+                Previous outcome
+              </label>
               <Select
                 value={form.poutcome}
-                onChange={(event) => setForm((prev) => ({ ...prev, poutcome: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, poutcome: event.target.value }))
+                }
                 options={[
                   { label: "failure", value: "failure" },
                   { label: "other", value: "other" },
                   { label: "success", value: "success" },
-                  { label: "unknown", value: "unknown" }
+                  { label: "unknown", value: "unknown" },
                 ]}
               />
             </div>
@@ -309,28 +440,75 @@ export default function BankDepositAIPage() {
 
         <Card>
           <h3 className="text-lg font-semibold text-white">Model Output</h3>
-          {selectedModel ? <Badge variant="info">Using {selectedModel.model}</Badge> : null}
-          {probability !== null ? (
+          {selectedModel ? (
+            <Badge variant="info">Using {selectedModel.model}</Badge>
+          ) : null}
+          {prediction ? (
             <div className="mt-4 space-y-3">
-              <p className="text-5xl font-bold text-cyan-200">{(probability * 100).toFixed(1)}%</p>
-              <Badge variant={probability > 0.6 ? "success" : "warning"}>
-                {probability > 0.6 ? "Likely Subscribe" : "Low Intent"}
+              <p className="text-5xl font-bold text-cyan-200">
+                {(prediction.probability * 100).toFixed(1)}%
+              </p>
+              <Badge
+                variant={prediction.probability > 0.6 ? "success" : "warning"}
+              >
+                {prediction.label}
               </Badge>
             </div>
           ) : (
-            <p className="mt-3 text-sm text-slate-400">Run prediction to view subscription probability.</p>
+            <p className="mt-3 text-sm text-slate-400">
+              Run prediction to view subscription probability.
+            </p>
           )}
         </Card>
       </div>
 
       <Card>
         <h3 className="text-lg font-semibold text-white">Feature Importance</h3>
-        <p className="mt-1 text-sm text-slate-400">Drivers behind campaign conversion performance.</p>
+        <p className="mt-1 text-sm text-slate-400">
+          Drivers behind campaign conversion performance.
+        </p>
         {featureImportance.length ? (
           <FeatureImportanceChart data={featureImportance} />
         ) : (
-          <p className="mt-3 text-sm text-slate-400">No live explainability data available.</p>
+          <p className="mt-3 text-sm text-slate-400">
+            No live explainability data available.
+          </p>
         )}
+      </Card>
+
+      <Card>
+        <h3 className="text-lg font-semibold text-white">
+          SHAP Waterfall Explanation
+        </h3>
+        <p className="mt-1 text-sm text-slate-400">
+          Feature-level additive impact for this deposit prediction.
+        </p>
+        <div className="mt-4">
+          {isPredicting ? (
+            <p className="text-sm text-slate-400">
+              Computing SHAP explanation…
+            </p>
+          ) : null}
+          {prediction?.shapExplanation?.available &&
+          prediction.shapExplanation.baseValue != null ? (
+            <ShapWaterfallChart
+              points={prediction.shapExplanation.points}
+              baseValue={prediction.shapExplanation.baseValue}
+              modelOutput={prediction.shapExplanation.modelOutput}
+            />
+          ) : null}
+          {prediction && !prediction.shapExplanation?.available ? (
+            <p className="rounded-xl border border-amber-300/20 bg-amber-500/10 p-4 text-sm text-amber-100">
+              {prediction.shapExplanation?.message ||
+                "SHAP explanation is unavailable for this environment."}
+            </p>
+          ) : null}
+          {!prediction && !isPredicting ? (
+            <p className="rounded-xl border border-dashed border-white/20 bg-slate-900/30 p-6 text-sm text-slate-400">
+              No SHAP explanation yet. Run a prediction to populate this panel.
+            </p>
+          ) : null}
+        </div>
       </Card>
     </div>
   );

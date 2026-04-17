@@ -27,6 +27,7 @@ from bank_term_deposit_module import (
 from hackathon_utils import (
     compute_baseline_forecasts,
     forecast_with_uncertainty,
+    get_shap_explanation,
     model_feature_importance,
     prepare_features,
     score_with_models,
@@ -65,6 +66,116 @@ def _to_records(df: pd.DataFrame, cols: list[str]) -> list[dict[str, Any]]:
                 rec[col] = value
         out.append(rec)
     return out
+
+
+def _build_shap_payload(model: Any, frame: pd.DataFrame, max_features: int = 12) -> dict[str, Any]:
+    payload = {
+        "available": False,
+        "message": "SHAP unavailable for this model or environment.",
+        "baseValue": None,
+        "modelOutput": None,
+        "points": [],
+    }
+
+    shap_values = get_shap_explanation(model, frame)
+    if shap_values is None:
+        try:
+            import shap
+
+            background = frame.copy()
+            if len(background) < 2:
+                background = pd.concat([background, background], ignore_index=True)
+            explainer = shap.Explainer(model, background)
+            shap_values = explainer(frame)
+        except Exception:
+            shap_values = None
+
+    if shap_values is None:
+        return payload
+
+    try:
+        feature_names = frame.columns.tolist()
+        data_values = frame.iloc[0].astype(float).values
+        base_value = 0.0
+
+        if hasattr(shap_values, "values"):
+            explanation = shap_values[0]
+            feature_names = list(getattr(explanation, "feature_names", frame.columns.tolist()) or frame.columns.tolist())
+            raw_values = np.asarray(getattr(explanation, "values", []), dtype=float)
+            if raw_values.ndim == 2:
+                values = raw_values[:, -1].reshape(-1)
+            elif raw_values.ndim == 1:
+                values = raw_values.reshape(-1)
+            else:
+                values = raw_values.reshape(-1)
+            if values.size == 0:
+                values = np.zeros(len(feature_names), dtype=float)
+
+            data_values = np.asarray(getattr(explanation, "data", frame.iloc[0].values), dtype=float).reshape(-1)
+            if data_values.size == 0:
+                data_values = frame.iloc[0].astype(float).values
+
+            base_values = np.asarray(getattr(explanation, "base_values", [0.0]), dtype=float).reshape(-1)
+            base_value = float(base_values[0]) if base_values.size else 0.0
+        else:
+            if isinstance(shap_values, list):
+                if len(shap_values) == 0:
+                    import shap
+
+                    explainer = shap.TreeExplainer(model)
+                    shap_values = explainer.shap_values(frame)
+                chosen = shap_values[1] if len(shap_values) > 1 else shap_values[0]
+            else:
+                chosen = shap_values
+
+            values_matrix = np.asarray(chosen, dtype=float)
+            if values_matrix.ndim == 3:
+                values = values_matrix[0, :, -1].reshape(-1)
+            elif values_matrix.ndim == 2:
+                values = values_matrix[0].reshape(-1)
+            else:
+                values = values_matrix.reshape(-1)
+
+            try:
+                import shap
+
+                expected = shap.TreeExplainer(model).expected_value
+                expected_vals = np.asarray(expected, dtype=float).reshape(-1)
+                if expected_vals.size:
+                    base_value = float(expected_vals[-1])
+            except Exception:
+                base_value = 0.0
+
+        limit = min(max_features, len(values), len(feature_names), len(data_values))
+        ranked_idx = np.argsort(np.abs(values))[::-1][:limit]
+
+        points: list[dict[str, Any]] = []
+        running = base_value
+        for idx in ranked_idx:
+            shap_val = float(values[idx])
+            start = float(running)
+            end = float(running + shap_val)
+            running = end
+            points.append(
+                {
+                    "feature": str(feature_names[idx]),
+                    "value": float(data_values[idx]),
+                    "shapValue": shap_val,
+                    "start": start,
+                    "end": end,
+                }
+            )
+
+        return {
+            "available": True,
+            "message": None,
+            "baseValue": base_value,
+            "modelOutput": float(running),
+            "points": points,
+        }
+    except Exception as exc:
+        payload["message"] = f"SHAP explanation failed: {exc}"
+        return payload
 
 
 def _require_columns(df: pd.DataFrame, required: list[str], context: str) -> None:
@@ -265,11 +376,13 @@ def _predict_default(payload: dict[str, Any]) -> dict[str, Any]:
     frame = prepare_features(pd.DataFrame([row]), features)
     probability = float(model.predict_proba(frame)[0][1])
     importance = model_feature_importance(model, features).head(8)
+    shap_payload = _build_shap_payload(model, frame)
 
     return {
         "probability": probability,
         "label": _label_from_probability(probability),
         "explainability": _to_records(importance, ["feature", "importance"]),
+        "shapExplanation": shap_payload,
     }
 
 
@@ -309,6 +422,7 @@ def _predict_churn(payload: dict[str, Any]) -> dict[str, Any]:
     frame = prepare_features(pd.DataFrame([row]), features)
     probability = float(model.predict_proba(frame)[0][1])
     importance = model_feature_importance(model, features).head(8)
+    shap_payload = _build_shap_payload(model, frame)
 
     if probability >= 0.65:
         suggestions = [
@@ -334,6 +448,7 @@ def _predict_churn(payload: dict[str, Any]) -> dict[str, Any]:
         "label": _label_from_probability(probability),
         "suggestions": suggestions,
         "explainability": _to_records(importance, ["feature", "importance"]),
+        "shapExplanation": shap_payload,
     }
 
 
@@ -508,16 +623,29 @@ def _portfolio_batch_score(payload: dict[str, Any]) -> dict[str, Any]:
 def _anomaly_detect(payload: dict[str, Any]) -> dict[str, Any]:
     artifacts = _load_or_train_anomaly_artifacts(contamination=0.03, random_state=42)
 
+    amount = float(payload.get("amount", 0))
+    hour = int(payload.get("hour", 10))
+    day_of_week = int(payload.get("dayOfWeek", 1))
+    frequency = int(payload.get("frequency", 1))
+
     result = analyze_transaction(
         artifacts,
-        amount=float(payload.get("amount", 0)),
-        hour=int(payload.get("hour", 10)),
-        day_of_week=int(payload.get("dayOfWeek", 1)),
-        frequency=int(payload.get("frequency", 1)),
+        amount=amount,
+        hour=hour,
+        day_of_week=day_of_week,
+        frequency=frequency,
     )
 
+    scaled = artifacts.scaler.transform(np.array([[amount, hour, day_of_week, frequency]], dtype=float))
+    shap_frame = pd.DataFrame(scaled, columns=artifacts.feature_columns)
+    shap_payload = _build_shap_payload(artifacts.iso_forest, shap_frame, max_features=4)
+
     label = "Suspicious" if bool(result["is_anomaly"]) else "Normal"
-    return {"score": float(result["score"]), "label": label}
+    return {
+        "score": float(result["score"]),
+        "label": label,
+        "shapExplanation": shap_payload,
+    }
 
 
 def _anomaly_timeseries(_: dict[str, Any]) -> dict[str, Any]:
@@ -706,12 +834,14 @@ def _deposit_predict(payload: dict[str, Any]) -> dict[str, Any]:
 
     prepared = preprocess_user_input(user_row, artifacts.feature_columns)
     pred, prob = predict_subscription(model, prepared)
+    shap_payload = _build_shap_payload(model, prepared)
 
     return {
         "probability": float(prob),
         "label": "Likely Subscribe" if float(prob) >= 0.6 else "Low Intent",
         "prediction": int(pred),
         "model": model_name,
+        "shapExplanation": shap_payload,
     }
 
 
