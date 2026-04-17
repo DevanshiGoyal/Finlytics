@@ -2,7 +2,7 @@
 
 ## NatWest Code for Purpose Hackathon 2026
 
-**Team Name:** CodeX_
+**Team Name:** CodeX\_
 
 **Team Members**
 
@@ -62,7 +62,7 @@ Imagine a small lending company where one person checks default risk in Excel, a
 
 ---
 
-## 3. Architecture 
+## 3. Architecture
 
 <p align="center">
   <img src="data/external/imgg2.png" alt="Finlytics architecture diagram" width="900" />
@@ -83,6 +83,10 @@ Imagine a small lending company where one person checks default risk in Excel, a
 - Borrower Churn - estimate if a customer is unlikely to return.
 - Loan Volume Forecast - 3-month outlook of total lending activity.
 - Credit Demand by Grade - demand forecasting split by borrower grade (A-E).
+- Explainable AI (XAI) Integration:
+  - SHAP waterfall plots provide local interpretability for single predictions.
+  - Analysts can see exactly which features increased or decreased an individual risk score.
+  - Supports transparent, audit-ready decisioning aligned with fintech trust requirements.
 - Bank Deposit AI:
   - Train and compare multiple models on campaign data.
   - Predict term-deposit subscription likelihood.
@@ -129,9 +133,10 @@ How it works:
 3. XGBoost model returns a default probability score.
 4. Dashboard maps the score to a risk label: Low / Medium / High.
 5. User sees the probability, decision threshold, and a recommended action.
+6. SHAP waterfall explains local drivers (for example DTI, income, interest rate), showing which factors pushed the borrower toward a High Risk or safer label.
 
 Business value:
-Helps credit analysts quickly triage new applications.
+Helps credit analysts quickly triage new applications while maintaining transparency and trust, because each High Risk decision is backed by feature-level evidence.
 
 ### Tab 2: Borrower Churn
 
@@ -144,9 +149,10 @@ How it works:
 2. Features are encoded and matched to the training schema.
 3. XGBoost churn model outputs a churn probability.
 4. UI shows whether the customer is likely to stay or churn.
+5. SHAP waterfall provides local explanation of the churn score, highlighting exactly which borrower-level features increased or reduced churn risk.
 
 Business value:
-Allows marketing teams to run targeted retention campaigns.
+Allows marketing teams to run targeted retention campaigns with explainable rationale, improving confidence in interventions and governance reporting.
 
 ### Tab 3: Loan Volume Forecast
 
@@ -206,9 +212,10 @@ How it works:
 3. Leaderboard displays accuracy, precision, recall, and F1.
 4. User enters a customer profile and picks a model.
 5. Output shows subscription probability and top contributing features.
+6. SHAP waterfall now explains each individual prediction so analysts can see which profile attributes pushed the customer toward likely subscribe vs low intent.
 
 Business value:
-Helps campaign teams focus outreach on high-probability customers.
+Helps campaign teams focus outreach on high-probability customers with transparent, feature-level justification that strengthens stakeholder trust.
 
 ### Tab 7: Deposit Anomaly
 
@@ -221,9 +228,10 @@ How it works:
 2. Live scan lets the user check one transaction and see anomaly reasons.
 3. Batch scanner scores an entire uploaded file and flags risky records.
 4. A risk trend chart tracks how anomaly scores change over time.
+5. SHAP waterfall on live scans shows which transaction features (for example amount, frequency, or timing) pushed the score toward suspicious classification.
 
 Business value:
-Early fraud detection before losses grow.
+Early fraud detection before losses grow, with interpretable evidence that supports faster analyst validation and stronger compliance trust.
 
 ### Use Cases
 
@@ -300,7 +308,6 @@ All diagnostic plots are available in the `reports/` folder.
 </table>
 
 ---
-
 
 ## 7. Project Structure
 
@@ -438,17 +445,17 @@ The frontend will start at http://localhost:3000.
 
 ## 10. Tech Stack
 
-| Layer | Technology | Purpose |
-| ----- | ---------- | ------- |
-| Language | Python 3.10+ | Core language for data processing, modeling, and backend analytics logic |
-| Dashboard | Streamlit | Build and run the interactive analytics dashboard |
-| Web Frontend | Next.js 14, React 18, TypeScript, Tailwind CSS | Provide modern web UI for feature modules and user workflows |
-| Data | pandas, NumPy | Data wrangling, transformations, and numeric computation |
-| ML | scikit-learn, XGBoost, imbalanced-learn | Classification/regression pipelines and imbalanced-data handling |
-| Forecasting | Prophet | Time-series forecasting for forward demand and volume projections |
-| Visualization | Matplotlib, seaborn, Recharts (frontend) | Plot diagnostics, trends, and KPI charts across backend and frontend |
-| Model Persistence | joblib | Save and load trained model artifacts efficiently |
-| Optional | OpenAI API (for AI-generated report text) | Generate narrative summary text for executive-style reporting |
+| Layer             | Technology                                     | Purpose                                                                  |
+| ----------------- | ---------------------------------------------- | ------------------------------------------------------------------------ |
+| Language          | Python 3.10+                                   | Core language for data processing, modeling, and backend analytics logic |
+| Dashboard         | Streamlit                                      | Build and run the interactive analytics dashboard                        |
+| Web Frontend      | Next.js 14, React 18, TypeScript, Tailwind CSS | Provide modern web UI for feature modules and user workflows             |
+| Data              | pandas, NumPy                                  | Data wrangling, transformations, and numeric computation                 |
+| ML                | scikit-learn, XGBoost, imbalanced-learn        | Classification/regression pipelines and imbalanced-data handling         |
+| Forecasting       | Prophet                                        | Time-series forecasting for forward demand and volume projections        |
+| Visualization     | Matplotlib, seaborn, Recharts (frontend)       | Plot diagnostics, trends, and KPI charts across backend and frontend     |
+| Model Persistence | joblib                                         | Save and load trained model artifacts efficiently                        |
+| Optional          | OpenAI API (for AI-generated report text)      | Generate narrative summary text for executive-style reporting            |
 
 ---
 
@@ -465,7 +472,7 @@ pytest -q
 ## 12. Team and Credits
 
 - Dataset source: Lending Club public loan data (Kaggle).
-- Team: CodeX_
+- Team: CodeX\_
 
 ---
 
@@ -481,11 +488,11 @@ pytest -q
 
 ## 14. Environment Variables
 
-| Variable | Required | Example | Purpose |
-| -------- | -------- | ------- | ------- |
-| GEMINI_API_KEY | Optional | your_gemini_api_key | Enables Ask Finlytics AI responses |
-| NEXT_PUBLIC_API_BASE_URL | Optional | http://localhost:3000 | Overrides frontend API base URL |
-| FINLYTICS_PYTHON | Optional | C:/path/to/python.exe | Forces Python interpreter for model Bridge |
+| Variable                 | Required | Example               | Purpose                                    |
+| ------------------------ | -------- | --------------------- | ------------------------------------------ |
+| GEMINI_API_KEY           | Optional | your_gemini_api_key   | Enables Ask Finlytics AI responses         |
+| NEXT_PUBLIC_API_BASE_URL | Optional | http://localhost:3000 | Overrides frontend API base URL            |
+| FINLYTICS_PYTHON         | Optional | C:/path/to/python.exe | Forces Python interpreter for model Bridge |
 
 ---
 
@@ -497,9 +504,9 @@ This project is released under the Apache License 2.0 in compliance with the Nat
 
 ## 16. Authors
 
-| Name | GitHub |
-| ---- | ------ |
-| Dia Dalal | @dalaldia5 |
-| Neelima Singh | @neelima-singh07 |
-| Devanshi Goyal | @DevanshiGoyal |
-| Mehak Taneja | @mehak2807 |
+| Name           | GitHub           |
+| -------------- | ---------------- |
+| Dia Dalal      | @dalaldia5       |
+| Neelima Singh  | @neelima-singh07 |
+| Devanshi Goyal | @DevanshiGoyal   |
+| Mehak Taneja   | @mehak2807       |

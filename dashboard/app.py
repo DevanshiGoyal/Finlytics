@@ -50,6 +50,7 @@ from hackathon_utils import (
     generate_demo_grade_data,
     generate_demo_monthly_data,
     generate_executive_report_md,
+    get_shap_explanation,
     generate_synthetic_portfolio,
     local_feature_impact,
     model_feature_importance,
@@ -536,6 +537,28 @@ def render_kpi_cards(cards):
             unsafe_allow_html=True,
         )
 
+
+def render_shap_plot(shap_values):
+    st.subheader("SHAP Explanation")
+
+    try:
+        import shap
+    except ImportError:
+        st.info("SHAP is not installed, so the waterfall explanation is unavailable.")
+        return
+
+    if shap_values is None:
+        st.info("SHAP explanation could not be generated for this prediction.")
+        return
+
+    try:
+        fig, ax = plt.subplots(figsize=(10, 5))
+        plt.sca(ax)
+        shap.plots.waterfall(shap_values[0], max_display=12, show=False)
+        st.pyplot(fig, clear_figure=True)
+    except Exception as e:
+        st.warning(f"Unable to render SHAP waterfall plot: {e}")
+
 # ── Load models (cached) ──────────────────────────────────────────────────────
 @st.cache_resource
 def load_module1_models():
@@ -734,6 +757,7 @@ with tab1:
 
         if st.button("🔍 Predict Default Risk", key="m1_predict"):
             prob = m1['xgb'].predict_proba(input_data)[0][1]
+            shap_values = get_shap_explanation(m1['xgb'], input_data)
 
             st.markdown("---")
             col1, col2 = st.columns(2)
@@ -750,6 +774,8 @@ with tab1:
                 st.metric("Default Probability", f"{prob:.1%}")
                 st.metric("Decision Threshold", "0.30")
                 st.metric("Prediction", "DEFAULT" if prob >= 0.3 else "REPAY")
+
+            render_shap_plot(shap_values)
 
     except Exception as e:
         st.error(f"Error loading Module 1 models: {e}")

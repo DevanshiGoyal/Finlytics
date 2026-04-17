@@ -31,10 +31,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-fin-gradient text-slate-100">
-      <div className="flex min-h-screen">
+    <div className="relative min-h-screen bg-fin-gradient text-slate-100">
+      <div className="relative z-10 flex min-h-screen">
         <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((prev) => !prev)} />
-        <div className="flex-1 px-3 pb-6 md:px-5">
+        <div className="flex-1 px-3 pb-8 pt-2 md:px-6 md:pb-10">
           <TopNavbar
             role={role}
             onRoleChange={setRole}
@@ -42,7 +42,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             onThemeToggle={toggleTheme}
             onOpenAssistant={() => setAssistantOpen(true)}
           />
-          <main className="space-y-6">{children}</main>
+          <main className="mx-auto w-full max-w-[1680px] space-y-6">{children}</main>
         </div>
       </div>
       <AIAssistantPanel open={assistantOpen} onClose={() => setAssistantOpen(false)} />

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, Iterable, List, Tuple
+from typing import Any, Dict, Iterable, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -190,6 +190,26 @@ def local_feature_impact(row: pd.Series, baseline_means: pd.Series, importance_d
 
     df = pd.DataFrame(impacts).sort_values("abs_impact", ascending=False).head(top_n).reset_index(drop=True)
     return df.drop(columns=["abs_impact"])
+
+
+def get_shap_explanation(model: Any, row: pd.DataFrame):
+    try:
+        import shap
+    except ImportError:
+        return None
+
+    if isinstance(row, pd.Series):
+        row_df = row.to_frame().T
+    elif isinstance(row, pd.DataFrame):
+        row_df = row.copy()
+    else:
+        row_df = pd.DataFrame([row])
+
+    try:
+        explainer = shap.TreeExplainer(model)
+        return explainer(row_df)
+    except Exception:
+        return None
 
 
 def generate_demo_monthly_data(seed: int = 7) -> pd.DataFrame:

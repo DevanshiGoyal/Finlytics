@@ -41,16 +41,16 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     <motion.aside
       animate={{ width: collapsed ? 92 : 280 }}
       transition={{ type: "spring", stiffness: 240, damping: 28 }}
-      className="sticky top-0 h-screen border-r border-white/10 bg-slate-950/70 p-4 backdrop-blur-xl"
+      className="sticky top-0 z-30 h-screen border-r border-white/10 bg-gradient-to-b from-slate-950/85 via-slate-900/60 to-slate-950/75 p-4 shadow-premium-soft backdrop-blur-xl"
     >
       <div className="mb-6 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 overflow-hidden">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-r from-blue-500 to-cyan-400 text-slate-950 font-black">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-cyan-300 to-blue-500 text-slate-950 font-black shadow-glow">
             F
           </div>
           {!collapsed ? (
             <div>
-              <p className="font-bold text-white">Finlytics</p>
+              <p className="bg-gradient-to-r from-cyan-100 to-blue-200 bg-clip-text font-bold text-transparent">Finlytics</p>
               <p className="text-xs text-slate-400">Predictive Analytics</p>
             </div>
           ) : null}
@@ -58,7 +58,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <button
           type="button"
           onClick={onToggle}
-          className="grid h-8 w-8 place-items-center rounded-lg border border-white/15 bg-slate-900/60 text-slate-200"
+          className="grid h-8 w-8 place-items-center rounded-lg border border-white/20 bg-slate-900/80 text-slate-200 transition hover:border-cyan-300/40 hover:text-cyan-100"
           aria-label="Toggle sidebar"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -74,10 +74,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                "group flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition",
+                "group flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition duration-200",
                 active
-                  ? "border-cyan-400/40 bg-gradient-to-r from-cyan-300/20 to-blue-400/20 text-cyan-100"
-                  : "border-transparent text-slate-300 hover:border-white/10 hover:bg-white/5"
+                  ? "border-cyan-300/40 bg-gradient-to-r from-cyan-300/22 to-blue-500/20 text-cyan-100 shadow-inner-soft"
+                  : "border-transparent text-slate-300 hover:border-white/15 hover:bg-white/5 hover:text-slate-100"
               )}
               title={collapsed ? item.label : undefined}
             >
@@ -89,7 +89,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </nav>
 
       {!collapsed ? (
-        <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/50 p-3 text-xs text-slate-300">
+        <div className="mt-6 rounded-2xl border border-cyan-400/15 bg-gradient-to-br from-slate-900/80 to-slate-950/70 p-3 text-xs text-slate-300 shadow-inner-soft">
           <p className="font-semibold text-cyan-200">System Status</p>
           <p className="mt-1 text-slate-400">All modules operational</p>
         </div>
