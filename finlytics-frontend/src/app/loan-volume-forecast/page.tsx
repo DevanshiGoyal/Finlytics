@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { ForecastAreaChart } from "@/components/charts/forecast-area-chart";
@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  getLoanVolumeForecast,
   predictLoanVolumeForecast,
   type LoanForecastRequest,
   type LoanForecastResponse,
@@ -95,28 +94,11 @@ function bpsText(value: number) {
 }
 
 export default function LoanVolumeForecastPage() {
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [data, setData] = useState<LoanForecastResponse | null>(null);
   const [form, setForm] = useState<ForecastFormState>(DEFAULT_FORM);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    const run = async () => {
-      try {
-        const response = await getLoanVolumeForecast();
-        setData(response);
-        setErrorMessage(null);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Could not load forecast stream";
-        setErrorMessage(message);
-        toast.error(message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    void run();
-  }, []);
+  const [showResetPlaceholders, setShowResetPlaceholders] = useState(false);
 
   const forecastRows = useMemo(
     () => (data?.interval ?? []).filter((point) => point.historical === null),
@@ -141,6 +123,7 @@ export default function LoanVolumeForecastPage() {
     try {
       const response = await predictLoanVolumeForecast(payload);
       setData(response);
+      setShowResetPlaceholders(false);
       toast.success("Forecast updated using trained Module 3 artifacts");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Loan volume prediction failed";
@@ -151,21 +134,12 @@ export default function LoanVolumeForecastPage() {
     }
   };
 
-  const resetToBaseline = async () => {
+  const resetToBaseline = () => {
     setForm(DEFAULT_FORM);
-    setSubmitting(true);
     setErrorMessage(null);
-    try {
-      const response = await getLoanVolumeForecast();
-      setData(response);
-      toast.success("Baseline forecast reloaded");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not reload baseline forecast";
-      setErrorMessage(message);
-      toast.error(message);
-    } finally {
-      setSubmitting(false);
-    }
+    setData(null);
+    setShowResetPlaceholders(true);
+    toast.success("Baseline reset and prediction output cleared");
   };
 
   return (
@@ -285,10 +259,10 @@ export default function LoanVolumeForecastPage() {
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Button onClick={runPrediction} disabled={submitting || loading}>
+            <Button onClick={runPrediction} disabled={submitting}>
               {submitting ? "Predicting..." : "Predict Loan Volume"}
             </Button>
-            <Button variant="secondary" onClick={resetToBaseline} disabled={submitting || loading}>
+            <Button variant="secondary" onClick={resetToBaseline} disabled={submitting}>
               Reset Baseline
             </Button>
           </div>
@@ -321,7 +295,21 @@ export default function LoanVolumeForecastPage() {
               </p>
             </div>
           ) : null}
-          {!submitting && !data?.summary ? (
+          {!submitting && !data?.summary && showResetPlaceholders ? (
+            <div className="mt-4 space-y-3">
+              <div>
+                <p className="text-xs text-slate-400">Projected Total</p>
+                <p className="text-3xl font-semibold text-cyan-200">--</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400">Average Monthly</p>
+                <p className="text-xl font-semibold text-white">--</p>
+              </div>
+              <Badge variant="info">Growth vs last actual: --</Badge>
+              <p className="text-xs text-slate-400">Final month --: -- (range -- - --)</p>
+            </div>
+          ) : null}
+          {!submitting && !data?.summary && !showResetPlaceholders ? (
             <p className="mt-3 text-sm text-slate-400">
               Run a prediction to see horizon totals, growth impact, and final confidence range.
             </p>
@@ -344,7 +332,12 @@ export default function LoanVolumeForecastPage() {
             </Badge>
           </Card>
         ))}
-        {!loading && !forecastHighlights.length ? (
+        {!data ? (
+          <Card className="md:col-span-3">
+            <p className="text-sm text-slate-400">Run a prediction to view forecast highlights.</p>
+          </Card>
+        ) : null}
+        {data && !forecastHighlights.length ? (
           <Card className="md:col-span-3">
             <p className="text-sm text-slate-400">No forward projection rows were returned by the forecast endpoint.</p>
           </Card>
@@ -356,20 +349,23 @@ export default function LoanVolumeForecastPage() {
           <h3 className="text-lg font-semibold text-white">Historical + Forecast + Confidence Region</h3>
           <Badge variant="info">Trained Model Projection</Badge>
         </div>
-        {loading ? <Skeleton className="h-[340px]" /> : null}
-        {!loading && data ? <ForecastAreaChart data={data.interval} /> : null}
-        {!loading && !data ? (
+        {data ? <ForecastAreaChart data={data.interval} /> : null}
+        {!data ? (
           <p className="rounded-xl border border-dashed border-white/20 bg-slate-900/30 p-6 text-sm text-slate-400">
-            Forecast dataset unavailable. Verify API or retry.
+            Run a prediction to populate the forecast chart.
           </p>
         ) : null}
       </Card>
 
       <Card>
         <h3 className="text-lg font-semibold text-white">Forecast Output Grid</h3>
-        {!forecastRows.length ? (
+        {!data ? (
+          <p className="mt-2 text-sm text-slate-400">Run a prediction to see forecast rows.</p>
+        ) : null}
+        {data && !forecastRows.length ? (
           <p className="mt-2 text-sm text-slate-400">No forecast rows returned for the selected scenario.</p>
-        ) : (
+        ) : null}
+        {data && forecastRows.length ? (
           <div className="mt-3 overflow-x-auto">
             <table className="min-w-full divide-y divide-white/10 text-sm">
               <thead>
@@ -392,7 +388,7 @@ export default function LoanVolumeForecastPage() {
               </tbody>
             </table>
           </div>
-        )}
+        ) : null}
 
         {data?.summary ? (
           <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
