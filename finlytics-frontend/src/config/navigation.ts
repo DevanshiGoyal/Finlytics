@@ -15,3 +15,29 @@ export const navItems: Array<{ label: string; href: Route }> = [
 export const roles = ["Risk Analyst", "Marketing Team", "Operations Manager"] as const;
 
 export type Role = (typeof roles)[number];
+
+export const rolePermissions: Record<Role, string[]> = {
+  "Risk Analyst": [
+    "Dashboard Overview",
+    "Loan Default Risk",
+    "Credit Demand by Grade",
+    "Deposit Anomaly Detection",
+    "Data Insight Studio"
+  ],
+  "Operations Manager": [
+    "Dashboard Overview",
+    "Loan Volume Forecast",
+    "Deposit Anomaly Detection",
+    "Wealth Persona Intelligence",
+    "Data Insight Studio"
+  ],
+  "Marketing Team": [
+    "Dashboard Overview",
+    "Borrower Churn",
+    "Data Insight Studio"
+  ]
+};
+
+export function getAllowedNavItems(role: Role) {
+  return navItems.filter(item => rolePermissions[role].includes(item.label));
+}

@@ -17,7 +17,7 @@ import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import type { ComponentType } from "react";
 
-import { navItems } from "@/config/navigation";
+import { getAllowedNavItems, navItems, type Role } from "@/config/navigation";
 import { cn } from "@/utils/cn";
 
 const iconMap: Record<string, ComponentType<{ className?: string }>> = {
@@ -34,10 +34,13 @@ const iconMap: Record<string, ComponentType<{ className?: string }>> = {
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  role: Role;
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, role }: SidebarProps) {
   const pathname = usePathname();
+
+  const allowedItems = getAllowedNavItems(role);
 
   return (
     <motion.aside
@@ -68,7 +71,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </div>
 
       <nav className="space-y-2">
-        {navItems.map((item) => {
+        {allowedItems.map((item) => {
           const Icon = iconMap[item.label] || LayoutDashboard;
           const active = pathname === item.href;
           return (

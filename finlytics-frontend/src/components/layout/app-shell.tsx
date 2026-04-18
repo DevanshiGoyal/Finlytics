@@ -33,7 +33,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative min-h-screen bg-fin-gradient text-slate-100">
       <div className="relative z-10 flex min-h-screen">
-        <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((prev) => !prev)} />
+<Sidebar collapsed={collapsed} onToggle={() => setCollapsed((prev) => !prev)} role={role} />
         <div className="flex-1 px-3 pb-8 pt-2 md:px-6 md:pb-10">
           <TopNavbar
             role={role}
