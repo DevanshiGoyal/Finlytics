@@ -1,3 +1,17 @@
+import type {
+  CreditDemandByGradeResponse,
+  CreditDemandForecastRequest,
+  CreditDemandForecastResponse,
+} from "./types";
+
+export type {
+  CreditDemandByGradeResponse,
+  CreditDemandForecast,
+  CreditDemandForecastRequest,
+  CreditDemandForecastResponse,
+  CreditDemandScenario,
+} from "./types";
+
 type JsonBody = Record<string, unknown>;
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -12,7 +26,17 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+    let message = `API request failed: ${response.status}`;
+    const raw = await response.text();
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as { error?: string; message?: string };
+        message = parsed.error || parsed.message || message;
+      } catch {
+        message = `${message} - ${raw}`;
+      }
+    }
+    throw new Error(message);
   }
 
   return (await response.json()) as T;
@@ -71,6 +95,43 @@ export interface ChurnPredictionResponse {
   shapExplanation?: ShapExplanationResponse;
 }
 
+export type LoanForecastScenario = "baseline" | "optimistic" | "conservative" | "stress";
+
+export interface LoanForecastRequest {
+  horizonMonths: number;
+  scenario: LoanForecastScenario;
+  growthAdjustmentPct: number;
+  interestRateShockBps: number;
+  loanCountChangePct: number;
+  avgLoanAmountChangePct: number;
+}
+
+export interface LoanForecastSummary {
+  horizonMonths: number;
+  scenario: string;
+  projectedTotal: number;
+  averageMonthly: number;
+  finalMonth: string;
+  finalValue: number;
+  finalRange: {
+    low: number;
+    high: number;
+  };
+  growthVsLastActualPct: number;
+  assumptions: {
+    growthAdjustmentPct: number;
+    interestRateShockBps: number;
+    loanCountChangePct: number;
+    avgLoanAmountChangePct: number;
+  };
+}
+
+export interface LoanForecastModelInfo {
+  primary: string;
+  blend: string;
+  scaler: string;
+}
+
 export interface LoanForecastResponse {
   trend: Array<{ month: string; actual: number; forecast: number }>;
   interval: Array<{
@@ -80,6 +141,10 @@ export interface LoanForecastResponse {
     high: number;
     historical: number | null;
   }>;
+  summary?: LoanForecastSummary;
+  request?: LoanForecastRequest & { userAdjustments?: Partial<LoanForecastRequest> };
+  model?: LoanForecastModelInfo;
+  warnings?: string[];
 }
 
 export interface AnomalyDetectResponse {
@@ -95,18 +160,6 @@ export interface AnomalyTimeseriesResponse {
 
 export interface AnomalyBatchScoreResponse {
   batch: Array<{ txId: string; amount: number; score: number; label: string }>;
-}
-
-export interface CreditDemandByGradeResponse {
-  trend: Array<{
-    month: string;
-    A: number;
-    B: number;
-    C: number;
-    D: number;
-    E: number;
-  }>;
-  heatmap: Array<{ grade: string; values: number[] }>;
 }
 
 export async function getDepositLeaderboard() {
@@ -142,6 +195,13 @@ export async function getLoanVolumeForecast() {
   });
 }
 
+export async function predictLoanVolumeForecast(payload: LoanForecastRequest) {
+  return request<LoanForecastResponse>("/forecast/loan-volume", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function detectAnomaly(payload: JsonBody) {
   return request<AnomalyDetectResponse>("/anomaly/detect", {
     method: "POST",
@@ -165,5 +225,12 @@ export async function scoreAnomalyBatch(payload: JsonBody) {
 export async function getCreditDemandByGrade() {
   return request<CreditDemandByGradeResponse>("/credit-demand/by-grade", {
     method: "GET",
+  });
+}
+
+export async function forecastCreditDemandByGrade(payload: CreditDemandForecastRequest) {
+  return request<CreditDemandForecastResponse>("/credit-demand/by-grade", {
+    method: "POST",
+    body: JSON.stringify(payload),
   });
 }
