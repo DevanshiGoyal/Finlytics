@@ -756,9 +756,9 @@ export default function TalkToDataPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Talk To Data"
+        title="Data Insight Studio"
         subtitle="Upload a CSV, ask natural-language questions, and inspect SQL, insights, and charts without affecting existing prediction modules."
-        tag="Conversational Analytics"
+        tag="Conversational Intelligence"
       />
 
       <div className="grid gap-4 xl:grid-cols-[360px_1fr]">
@@ -769,7 +769,7 @@ export default function TalkToDataPage() {
               {isUploading ? <Badge variant="warning">Uploading...</Badge> : null}
             </div>
 
-            <FileUpload onFileSelect={handleUpload} title="Upload CSV for Talk To Data" />
+            <FileUpload onFileSelect={handleUpload} title="Upload CSV for Data Insight Studio" />
 
             {dataset ? (
               <div className="space-y-3 rounded-2xl border border-white/10 bg-slate-950/30 p-3">
@@ -901,7 +901,7 @@ export default function TalkToDataPage() {
           <div className="px-4 pb-4">
             {!dataset ? (
               <EmptyState
-                title="Talk To Data Is Ready"
+                title="Data Insight Studio Is Ready"
                 description="Upload a CSV from the left panel, then switch between chat and visualization views."
               />
             ) : viewMode === "chat" ? (

@@ -28,7 +28,7 @@ const iconMap: Record<string, ComponentType<{ className?: string }>> = {
   "Credit Demand by Grade": BarChart3,
   "Bank Deposit AI": WalletCards,
   "Deposit Anomaly Detection": Activity,
-  "Talk To Data": MessageSquareText
+  "Data Insight Studio": MessageSquareText
 };
 
 interface SidebarProps {
