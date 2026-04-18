@@ -7,7 +7,8 @@ export const navItems: Array<{ label: string; href: Route }> = [
   { label: "Loan Volume Forecast", href: "/loan-volume-forecast" },
   { label: "Credit Demand by Grade", href: "/credit-demand-by-grade" },
   { label: "Bank Deposit AI", href: "/bank-deposit-ai" },
-  { label: "Deposit Anomaly Detection", href: "/deposit-anomaly-detection" }
+  { label: "Deposit Anomaly Detection", href: "/deposit-anomaly-detection" },
+  { label: "Wealth Persona Intelligence", href: "/wealth-persona" }
 ];
 
 export const roles = ["Risk Analyst", "Marketing Team", "Operations Manager"] as const;

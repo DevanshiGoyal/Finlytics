@@ -33,6 +33,7 @@ from hackathon_utils import (
     prepare_features,
     score_with_models,
 )
+from wealth_persona_module import run_wealth_persona_pipeline
 
 
 MODULE3_SCENARIO_PRESETS: dict[str, dict[str, float]] = {
@@ -1719,6 +1720,159 @@ def _deposit_predict(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _wealth_persona_insights(payload: dict[str, Any]) -> dict[str, Any]:
+    def _clamp_int(value: float, lower: int, upper: int, fallback: int) -> int:
+        if not np.isfinite(value):
+            return fallback
+        out = int(round(float(value)))
+        return max(lower, min(upper, out))
+
+    dataset_path_raw = payload.get("datasetPath", payload.get("dataset_path", ""))
+    dataset_path = str(dataset_path_raw).strip() if dataset_path_raw not in (None, "") else None
+
+    k_value = _clamp_int(_optional_float(payload, ["k", "clusters"], 4.0), 2, 10, 4)
+    random_state = int(round(_optional_float(payload, ["randomState", "random_state"], 42.0)))
+    top_n = _clamp_int(_optional_float(payload, ["topN", "top_n"], 15.0), 5, 100, 15)
+
+    if dataset_path is None:
+        default_path = PROJECT_ROOT / "data" / "external" / "bank_transactions.csv"
+        dataset_path = str(default_path)
+
+    artifacts = run_wealth_persona_pipeline(
+        dataset_path=dataset_path,
+        k=k_value,
+        random_state=random_state,
+    )
+
+    customers = artifacts.customer_features.copy()
+    vital_few = customers[customers["IsVitalFew"]].copy()
+
+    persona_breakdown = artifacts.cluster_profiles.rename(
+        columns={
+            "Customers": "customers",
+            "MedianAge": "medianAge",
+            "Recency": "avgRecency",
+            "Frequency": "avgFrequency",
+            "Monetary": "avgMonetary",
+            "AvgAccountBalance": "avgAccountBalance",
+            "VitalFewShare": "vitalFewShare",
+            "Persona": "persona",
+            "Cluster": "cluster",
+        }
+    ).copy()
+
+    top_vital = vital_few.sort_values("WealthValue", ascending=False).head(top_n)
+    top_vital = top_vital.rename(
+        columns={
+            "CustLocationNorm": "location",
+            "RFM_Score": "rfmScore",
+            "WealthValue": "wealthValue",
+            "Frequency": "frequency",
+            "Monetary": "monetary",
+            "AvgAccountBalance": "avgAccountBalance",
+            "MedianAge": "medianAge",
+            "Persona": "persona",
+        }
+    )
+
+    regional = artifacts.regional_intelligence.sort_values("PotentialScore", ascending=False).head(top_n).rename(
+        columns={
+            "CustLocationNorm": "location",
+            "Customers": "customers",
+            "TotalAccountBalance": "totalAccountBalance",
+            "AvgAccountBalance": "avgAccountBalance",
+            "TotalTransactionValue": "totalTransactionValue",
+            "VitalFewShare": "vitalFewShare",
+            "PotentialScore": "potentialScore",
+            "HighPotentialZone": "highPotentialZone",
+        }
+    )
+
+    anomaly_df = artifacts.anomaly_benchmarks.copy()
+    anomaly_df = anomaly_df[anomaly_df["IsBehavioralAnomaly"]].sort_values("BehavioralAnomalyScore", ascending=False).head(top_n)
+    anomaly_df = anomaly_df.rename(
+        columns={
+            "CustomerID": "customerId",
+            "TransactionDate": "transactionDate",
+            "TransactionAmount": "transactionAmount",
+            "CustLocationNorm": "location",
+            "BehavioralAnomalyScore": "anomalyScore",
+            "BehavioralReason": "reason",
+        }
+    )
+
+    persona_counts = (
+        customers.groupby("Persona", observed=True)["CustomerID"]
+        .count()
+        .reset_index()
+        .rename(columns={"Persona": "persona", "CustomerID": "customers"})
+        .sort_values("customers", ascending=False)
+        .reset_index(drop=True)
+    )
+
+    return {
+        "summary": {
+            **artifacts.summary,
+            "datasetPath": dataset_path,
+            "k": k_value,
+            "topN": top_n,
+        },
+        "personaBreakdown": _to_records(
+            persona_breakdown,
+            [
+                "cluster",
+                "persona",
+                "customers",
+                "medianAge",
+                "avgRecency",
+                "avgFrequency",
+                "avgMonetary",
+                "avgAccountBalance",
+                "vitalFewShare",
+            ],
+        ),
+        "personaCounts": _to_records(persona_counts, ["persona", "customers"]),
+        "topVitalFew": _to_records(
+            top_vital,
+            [
+                "CustomerID",
+                "persona",
+                "location",
+                "rfmScore",
+                "wealthValue",
+                "frequency",
+                "monetary",
+                "avgAccountBalance",
+                "medianAge",
+            ],
+        ),
+        "topRegions": _to_records(
+            regional,
+            [
+                "location",
+                "customers",
+                "totalAccountBalance",
+                "avgAccountBalance",
+                "totalTransactionValue",
+                "vitalFewShare",
+                "potentialScore",
+                "highPotentialZone",
+            ],
+        ),
+        "topBehavioralAnomalies": _to_records(
+            anomaly_df,
+            [
+                "customerId",
+                "transactionDate",
+                "transactionAmount",
+                "location",
+                "anomalyScore",
+                "reason",
+            ],
+        ),
+    }
+
+
 OP_MAP = {
     "predict_default": _predict_default,
     "predict_churn": _predict_churn,
@@ -1731,6 +1885,7 @@ OP_MAP = {
     "credit_demand_by_grade_forecast": _forecast_credit_demand_by_grade,
     "deposit_leaderboard": _deposit_leaderboard,
     "deposit_predict": _deposit_predict,
+    "wealth_persona_insights": _wealth_persona_insights,
 }
 
 

@@ -31,7 +31,7 @@ def encode_known_categories(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     for col, mapping in CATEGORY_MAPS.items():
         if col in out.columns:
-            if out[col].dtype == object:
+            if pd.api.types.is_object_dtype(out[col]) or pd.api.types.is_string_dtype(out[col]):
                 mapped = out[col].astype(str).str.strip().str.upper() if col == "grade" else out[col].astype(str).str.strip()
                 if col == "grade":
                     out[col] = mapped.map(mapping).fillna(0).astype(int)
