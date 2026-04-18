@@ -18,13 +18,12 @@ function normaliseBaseUrl(url: string): string {
   return url.trim().replace(/\/+$/, "");
 }
 
-const DEFAULT_LOCAL_API_BASE = "http://127.0.0.1:8000";
-const API_BASE = normaliseBaseUrl(
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-    (process.env.NODE_ENV === "development" ? DEFAULT_LOCAL_API_BASE : "")
-);
+const DEFAULT_LOCAL_TALK_TO_DATA_API_BASE = "http://127.0.0.1:8000";
+const API_BASE = normaliseBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL || "");
 const TALK_TO_DATA_API_BASE = normaliseBaseUrl(
-  process.env.NEXT_PUBLIC_TALK_TO_DATA_API_BASE_URL || API_BASE
+  process.env.NEXT_PUBLIC_TALK_TO_DATA_API_BASE_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    (process.env.NODE_ENV === "development" ? DEFAULT_LOCAL_TALK_TO_DATA_API_BASE : "")
 );
 
 type ContentTypeMode = "json" | "none";
