@@ -162,6 +162,86 @@ export interface AnomalyBatchScoreResponse {
   batch: Array<{ txId: string; amount: number; score: number; label: string }>;
 }
 
+export interface WealthPersonaSummary {
+  dataset_source: string;
+  datasetPath: string;
+  kaggle_dataset_url: string;
+  rfm_notebook_url: string;
+  persona_notebook_url: string;
+  behavior_notebook_url: string;
+  transaction_rows: number;
+  customers: number;
+  vital_few_customers: number;
+  vital_few_share: number;
+  behavioral_anomalies: number;
+  high_potential_zones: number;
+  k: number;
+  topN: number;
+}
+
+export interface WealthPersonaBreakdownRow {
+  [key: string]: unknown;
+  cluster: number;
+  persona: string;
+  customers: number;
+  medianAge: number;
+  avgRecency: number;
+  avgFrequency: number;
+  avgMonetary: number;
+  avgAccountBalance: number;
+  vitalFewShare: number;
+}
+
+export interface WealthPersonaCountRow {
+  [key: string]: unknown;
+  persona: string;
+  customers: number;
+}
+
+export interface WealthVitalFewRow {
+  [key: string]: unknown;
+  CustomerID: string;
+  persona: string;
+  location: string;
+  rfmScore: string;
+  wealthValue: number;
+  frequency: number;
+  monetary: number;
+  avgAccountBalance: number;
+  medianAge: number;
+}
+
+export interface WealthRegionRow {
+  [key: string]: unknown;
+  location: string;
+  customers: number;
+  totalAccountBalance: number;
+  avgAccountBalance: number;
+  totalTransactionValue: number;
+  vitalFewShare: number;
+  potentialScore: number;
+  highPotentialZone: boolean;
+}
+
+export interface WealthBehavioralAnomalyRow {
+  [key: string]: unknown;
+  customerId: string;
+  transactionDate: string;
+  transactionAmount: number;
+  location: string;
+  anomalyScore: number;
+  reason: string;
+}
+
+export interface WealthPersonaInsightsResponse {
+  summary: WealthPersonaSummary;
+  personaBreakdown: WealthPersonaBreakdownRow[];
+  personaCounts: WealthPersonaCountRow[];
+  topVitalFew: WealthVitalFewRow[];
+  topRegions: WealthRegionRow[];
+  topBehavioralAnomalies: WealthBehavioralAnomalyRow[];
+}
+
 export async function getDepositLeaderboard() {
   return request<DepositLeaderboardResponse>("/deposit/leaderboard", {
     method: "GET",
@@ -219,6 +299,17 @@ export async function scoreAnomalyBatch(payload: JsonBody) {
   return request<AnomalyBatchScoreResponse>("/anomaly/batch-score", {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+export async function getWealthPersonaInsights(payload?: {
+  datasetPath?: string;
+  k?: number;
+  topN?: number;
+}) {
+  return request<WealthPersonaInsightsResponse>("/wealth-persona/insights", {
+    method: "POST",
+    body: JSON.stringify(payload ?? {}),
   });
 }
 
