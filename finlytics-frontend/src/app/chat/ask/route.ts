@@ -18,11 +18,13 @@ type GeminiResponse = {
 };
 
 const MODEL_FALLBACKS = [
-  "gemini-2.5-flash",
+  "gemini-flash-latest",
+  "gemini-flash-lite-latest",
   "gemini-2.0-flash",
   "gemini-2.0-flash-lite",
-  "gemini-1.5-flash-latest",
-  "gemini-1.5-pro"
+  "gemini-2.0-flash-001",
+  "gemini-2.0-flash-lite-001",
+  "gemini-2.5-flash"
 ];
 
 const DEFAULT_REPLY =
@@ -133,7 +135,10 @@ export async function POST(request: NextRequest) {
           generationConfig: {
             temperature: 0.3,
             topP: 0.9,
-            maxOutputTokens: 320
+            maxOutputTokens: 640,
+            thinkingConfig: {
+              thinkingBudget: 0
+            }
           }
         })
       });
@@ -147,12 +152,18 @@ export async function POST(request: NextRequest) {
       const detail = await geminiResponse.text();
       lastError = `Gemini request failed (${geminiResponse.status}) on model '${model}'. ${detail.slice(0, 280)}`;
 
-      const unsupportedModel =
+      const lowerDetail = detail.toLowerCase();
+      const shouldTryNextModel =
         geminiResponse.status === 404 ||
-        detail.includes("not found") ||
-        detail.includes("not supported");
+        geminiResponse.status === 429 ||
+        geminiResponse.status === 503 ||
+        lowerDetail.includes("not found") ||
+        lowerDetail.includes("not supported") ||
+        lowerDetail.includes("quota") ||
+        lowerDetail.includes("rate limit") ||
+        lowerDetail.includes("resource exhausted");
 
-      if (!unsupportedModel) {
+      if (!shouldTryNextModel) {
         break;
       }
     }

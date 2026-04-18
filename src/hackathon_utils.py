@@ -334,7 +334,31 @@ def forecast_with_uncertainty(monthly_df: pd.DataFrame, horizon: int = 4) -> pd.
         )
     return pd.DataFrame(rows)
 
+# Add to src/hackathon_utils.py
 
+def ensemble_forecast(monthly_df: pd.DataFrame, horizon: int = 4) -> pd.DataFrame:
+    """Combine multiple forecast methods for robustness."""
+    import xgboost as xgb
+    from prophet import Prophet
+    
+    # FinSight forecast (current champion)
+    finsight = forecast_with_uncertainty(monthly_df, horizon)
+    
+    # Add Prophet
+    prophet_df = monthly_df[['month_start', 'funded_amnt_m']].rename(
+        columns={'month_start': 'ds', 'funded_amnt_m': 'y'}
+    )
+    model = Prophet(yearly_seasonality=True, seasonality_prior_scale=10)
+    model.fit(prophet_df)
+    future = model.make_future_dataframe(periods=horizon, freq='MS')
+    prophet_forecast = model.predict(future)
+    
+    # Ensemble: average
+    result = finsight.copy()
+    result['prophet_forecast'] = prophet_forecast[-horizon:]['yhat'].values
+    result['ensemble'] = (result['forecast_central'] + result['prophet_forecast']) / 2
+    
+    return result
 def baseline_backtest(monthly_df: pd.DataFrame, holdout: int = 4) -> pd.DataFrame:
     ts = monthly_df.sort_values("month_start").reset_index(drop=True)
     holdout = max(1, min(int(holdout), max(1, len(ts) - 4)))

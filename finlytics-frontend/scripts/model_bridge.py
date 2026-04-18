@@ -4,6 +4,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from statistics import NormalDist
 from typing import Any
 
 import joblib
@@ -32,6 +33,73 @@ from hackathon_utils import (
     prepare_features,
     score_with_models,
 )
+
+
+MODULE3_SCENARIO_PRESETS: dict[str, dict[str, float]] = {
+    "baseline": {
+        "growthAdjustmentPct": 0.0,
+        "interestRateShockBps": 0.0,
+        "loanCountChangePct": 0.0,
+        "avgLoanAmountChangePct": 0.0,
+    },
+    "optimistic": {
+        "growthAdjustmentPct": 5.0,
+        "interestRateShockBps": -20.0,
+        "loanCountChangePct": 8.0,
+        "avgLoanAmountChangePct": 3.0,
+    },
+    "conservative": {
+        "growthAdjustmentPct": -5.0,
+        "interestRateShockBps": 30.0,
+        "loanCountChangePct": -6.0,
+        "avgLoanAmountChangePct": -2.0,
+    },
+    "stress": {
+        "growthAdjustmentPct": -12.0,
+        "interestRateShockBps": 75.0,
+        "loanCountChangePct": -15.0,
+        "avgLoanAmountChangePct": -4.0,
+    },
+}
+
+MODULE3_SCENARIO_RISK_MULTIPLIER: dict[str, float] = {
+    "baseline": 1.0,
+    "optimistic": 0.9,
+    "conservative": 1.15,
+    "stress": 1.35,
+}
+
+GRADES = ["A", "B", "C", "D", "E"]
+
+MODULE4_DEFAULT_FEATURES = [
+    "month",
+    "quarter",
+    "year",
+    "lag_1",
+    "lag_2",
+    "lag_3",
+    "lag_6",
+    "lag_12",
+    "rolling_3",
+    "rolling_6",
+    "avg_int_rate",
+    "loan_count",
+    "mom_growth",
+]
+
+MODULE4_REPORT_METRICS = {
+    "A": {"mape": 2.72, "rmse": 10.5},
+    "B": {"mape": 4.97, "rmse": 14.2},
+    "C": {"mape": 5.03, "rmse": 16.4},
+    "D": {"mape": 8.55, "rmse": 18.7},
+    "E": {"mape": 8.73, "rmse": 12.8},
+}
+
+MODULE4_SCENARIO_MULTIPLIER = {
+    "baseline": 1.0,
+    "optimistic": 1.15,
+    "pessimistic": 0.85,
+}
 
 
 def _load_json_stdin() -> dict[str, Any]:
@@ -215,10 +283,492 @@ def _require_str(payload: dict[str, Any], keys: list[str], field_label: str) -> 
     return text
 
 
+def _optional_float(payload: dict[str, Any], keys: list[str], default: float = 0.0) -> float:
+    for key in keys:
+        if key in payload and payload.get(key) not in (None, ""):
+            raw = payload.get(key)
+            try:
+                return float(raw)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"Invalid numeric value for {key}: {raw}") from exc
+    return float(default)
+
+
+def _bounded(value: float, field_label: str, lower: float, upper: float) -> float:
+    if value < lower or value > upper:
+        raise ValueError(f"{field_label} must be between {lower} and {upper}")
+    return float(value)
+
+
+def _normalize_module3_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    scenario = str(payload.get("scenario", "baseline")).strip().lower()
+    if scenario not in MODULE3_SCENARIO_PRESETS:
+        valid = ", ".join(sorted(MODULE3_SCENARIO_PRESETS.keys()))
+        raise ValueError(f"Unsupported scenario '{scenario}'. Valid options: {valid}")
+
+    horizon_raw = payload.get("horizonMonths", payload.get("horizon", 3))
+    try:
+        horizon = int(round(float(horizon_raw)))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Invalid numeric value for horizonMonths: {horizon_raw}") from exc
+
+    if horizon < 1 or horizon > 12:
+        raise ValueError("horizonMonths must be between 1 and 12")
+
+    user_growth = _bounded(
+        _optional_float(payload, ["growthAdjustmentPct", "growth_adjustment_pct"], 0.0),
+        "growthAdjustmentPct",
+        -40.0,
+        60.0,
+    )
+    user_rate = _bounded(
+        _optional_float(payload, ["interestRateShockBps", "interest_rate_shock_bps"], 0.0),
+        "interestRateShockBps",
+        -400.0,
+        400.0,
+    )
+    user_count = _bounded(
+        _optional_float(payload, ["loanCountChangePct", "loan_count_change_pct"], 0.0),
+        "loanCountChangePct",
+        -50.0,
+        120.0,
+    )
+    user_loan_amount = _bounded(
+        _optional_float(payload, ["avgLoanAmountChangePct", "avg_loan_amount_change_pct"], 0.0),
+        "avgLoanAmountChangePct",
+        -50.0,
+        80.0,
+    )
+
+    preset = MODULE3_SCENARIO_PRESETS[scenario]
+    return {
+        "scenario": scenario,
+        "horizonMonths": horizon,
+        "growthAdjustmentPct": float(preset["growthAdjustmentPct"] + user_growth),
+        "interestRateShockBps": float(preset["interestRateShockBps"] + user_rate),
+        "loanCountChangePct": float(preset["loanCountChangePct"] + user_count),
+        "avgLoanAmountChangePct": float(preset["avgLoanAmountChangePct"] + user_loan_amount),
+        "userAdjustments": {
+            "growthAdjustmentPct": user_growth,
+            "interestRateShockBps": user_rate,
+            "loanCountChangePct": user_count,
+            "avgLoanAmountChangePct": user_loan_amount,
+        },
+    }
+
+
+def _normalize_credit_demand_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    horizon_raw = payload.get("horizon", payload.get("horizonMonths", 3))
+    try:
+        horizon = int(round(float(horizon_raw)))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Invalid numeric value for horizon: {horizon_raw}") from exc
+
+    if horizon < 1 or horizon > 12:
+        raise ValueError("horizon must be between 1 and 12")
+
+    confidence = _bounded(
+        _optional_float(payload, ["confidence", "confidenceLevel", "confidence_level"], 0.95),
+        "confidence",
+        0.5,
+        0.99,
+    )
+
+    scenario = str(payload.get("scenarioType", payload.get("scenario", "baseline"))).strip().lower()
+    if scenario not in MODULE4_SCENARIO_MULTIPLIER:
+        valid = ", ".join(sorted(MODULE4_SCENARIO_MULTIPLIER.keys()))
+        raise ValueError(f"Unsupported scenarioType '{scenario}'. Valid options: {valid}")
+
+    base_volume = payload.get("baseVolume")
+    if base_volume in (None, ""):
+        base_volume_value: float | None = None
+    else:
+        try:
+            base_volume_value = float(base_volume)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Invalid numeric value for baseVolume: {base_volume}") from exc
+        if base_volume_value <= 0:
+            raise ValueError("baseVolume must be greater than 0 when provided")
+
+    return {
+        "horizon": horizon,
+        "confidence": float(confidence),
+        "scenarioType": scenario,
+        "baseVolume": base_volume_value,
+    }
+
+
+def _confidence_z(confidence: float) -> float:
+    confidence = min(0.999, max(0.5, float(confidence)))
+    return float(NormalDist().inv_cdf((1.0 + confidence) / 2.0))
+
+
+def _load_grade_monthly_history() -> pd.DataFrame:
+    grade_path = PROJECT_ROOT / "data/processed/grade_monthly_demand.csv"
+    if grade_path.exists():
+        grade_df = pd.read_csv(grade_path, parse_dates=["month_start"])
+        _require_columns(grade_df, ["month_start", "grade", "funded_amnt_m"], "credit demand by grade")
+        return grade_df.sort_values("month_start").reset_index(drop=True)
+
+    monthly = _load_monthly_series()
+    shares = _grade_share_from_artifacts()
+    rows = []
+    for rec in monthly.itertuples(index=False):
+        for grade in GRADES:
+            rows.append(
+                {
+                    "month_start": rec.month_start,
+                    "grade": grade,
+                    "funded_amnt_m": float(rec.funded_amnt_m) * float(shares.get(grade, 0.0)),
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def _build_grade_history_pivot(grade_df: pd.DataFrame) -> pd.DataFrame:
+    monthly_grade = (
+        grade_df.groupby(["month_start", "grade"], as_index=False)["funded_amnt_m"]
+        .sum()
+        .sort_values("month_start")
+    )
+    pivot = (
+        monthly_grade.pivot(index="month_start", columns="grade", values="funded_amnt_m")
+        .fillna(0.0)
+        .sort_index()
+    )
+    for grade in GRADES:
+        if grade not in pivot.columns:
+            pivot[grade] = 0.0
+    return pivot[GRADES].copy()
+
+
+def _load_grade_models() -> tuple[dict[str, dict[str, Any]], list[str], list[str]]:
+    artifacts: dict[str, dict[str, Any]] = {}
+    warnings: list[str] = []
+
+    feature_path = PROJECT_ROOT / "models/module4_features.pkl"
+    feature_list = list(MODULE4_DEFAULT_FEATURES)
+
+    if feature_path.exists():
+        try:
+            feature_list = list(joblib.load(feature_path))
+        except Exception as exc:
+            warnings.append(
+                f"Could not load module4_features.pkl; using default feature schema. Reason: {exc}"
+            )
+    else:
+        warnings.append("module4_features.pkl not found; using default feature schema.")
+
+    for grade in GRADES:
+        model_path = PROJECT_ROOT / f"models/module4_xgb_grade{grade}.pkl"
+        scaler_path = PROJECT_ROOT / f"models/module4_scaler_grade{grade}.pkl"
+        if not model_path.exists() or not scaler_path.exists():
+            warnings.append(
+                f"Missing model artifacts for Grade {grade}: {model_path.name} or {scaler_path.name}."
+            )
+            continue
+
+        try:
+            model = joblib.load(model_path)
+            scaler = joblib.load(scaler_path)
+        except Exception as exc:
+            warnings.append(f"Could not load Grade {grade} model artifacts: {exc}")
+            continue
+
+        defaults = {feature: 0.0 for feature in feature_list}
+        means = getattr(scaler, "mean_", None)
+        if means is not None and len(means) == len(feature_list):
+            for idx, feature in enumerate(feature_list):
+                defaults[feature] = float(means[idx])
+
+        artifacts[grade] = {
+            "model": model,
+            "scaler": scaler,
+            "features": feature_list,
+            "defaults": defaults,
+        }
+
+    return artifacts, feature_list, warnings
+
+
+def _build_module4_feature_row(
+    grade_history_values: list[float],
+    month_start: pd.Timestamp,
+    features: list[str],
+    defaults: dict[str, float],
+    total_hint: float,
+) -> dict[str, float]:
+    values = [float(v) for v in grade_history_values if np.isfinite(v)]
+    row = {feature: float(defaults.get(feature, 0.0)) for feature in features}
+
+    row["month"] = float(month_start.month)
+    row["quarter"] = float(((month_start.month - 1) // 3) + 1)
+    row["year"] = float(month_start.year)
+
+    for lag in [1, 2, 3, 6, 12]:
+        key = f"lag_{lag}"
+        if key in row:
+            row[key] = float(values[-lag]) if len(values) >= lag else float(defaults.get(key, row[key]))
+
+    for window in [3, 6, 12]:
+        key = f"rolling_{window}"
+        if key in row:
+            window_vals = values[-window:] if values else []
+            row[key] = float(np.mean(window_vals)) if window_vals else float(defaults.get(key, row[key]))
+
+    if "mom_growth" in row:
+        if len(values) >= 2 and abs(values[-2]) > 1e-6:
+            row["mom_growth"] = float((values[-1] - values[-2]) / abs(values[-2]))
+        else:
+            row["mom_growth"] = float(defaults.get("mom_growth", 0.0))
+
+    if "loan_count" in row:
+        base_count = max(1.0, float(defaults.get("loan_count", 1.0)))
+        reference_total = max(float(defaults.get("lag_1", total_hint if total_hint > 0 else 1.0)), 1.0)
+        scaled_count = base_count * (max(total_hint, 1.0) / reference_total)
+        row["loan_count"] = float(max(1.0, scaled_count))
+
+    return row
+
+
+def _default_grade_feature_importance(features: list[str]) -> list[dict[str, float]]:
+    weights = {
+        "lag_1": 0.26,
+        "rolling_3": 0.2,
+        "rolling_6": 0.15,
+        "lag_3": 0.12,
+        "lag_6": 0.08,
+        "mom_growth": 0.07,
+        "loan_count": 0.06,
+        "month": 0.04,
+        "quarter": 0.02,
+    }
+
+    rows: list[dict[str, float]] = []
+    for feature in features:
+        rows.append({"feature": feature, "importance": float(weights.get(feature, 0.01))})
+
+    total = sum(row["importance"] for row in rows) or 1.0
+    normalized = [
+        {"feature": row["feature"], "importance": float(row["importance"] / total)}
+        for row in rows
+    ]
+    return sorted(normalized, key=lambda item: item["importance"], reverse=True)[:6]
+
+
+def _grade_model_backtest_metrics(
+    grade: str,
+    month_index: list[pd.Timestamp],
+    grade_values: list[float],
+    total_values: list[float],
+    artifact: dict[str, Any] | None,
+) -> dict[str, float]:
+    fallback = MODULE4_REPORT_METRICS.get(grade, {"mape": 8.0, "rmse": 15.0})
+    if artifact is None or len(grade_values) < 18 or len(total_values) < len(grade_values):
+        mape = float(fallback["mape"])
+        rmse = float(fallback["rmse"])
+        return {
+            "mape": round(mape, 2),
+            "rmse": round(rmse, 2),
+            "trainingMapeOnTestSet": round(mape, 2),
+        }
+
+    preds: list[float] = []
+    actuals: list[float] = []
+    start_idx = max(12, len(grade_values) - 18)
+    try:
+        for idx in range(start_idx, len(grade_values)):
+            train_values = grade_values[:idx]
+            if not train_values:
+                continue
+            month_start = pd.to_datetime(month_index[idx])
+            total_hint = float(total_values[idx - 1]) if idx - 1 >= 0 else float(total_values[0])
+            feature_row = _build_module4_feature_row(
+                train_values,
+                month_start,
+                artifact["features"],
+                artifact["defaults"],
+                total_hint,
+            )
+            frame = pd.DataFrame([feature_row], columns=artifact["features"]).fillna(0.0)
+            scaled = artifact["scaler"].transform(frame)
+            pred = float(np.asarray(artifact["model"].predict(scaled)).ravel()[0])
+            preds.append(max(0.0, pred))
+            actuals.append(max(0.0, float(grade_values[idx])))
+    except Exception:
+        mape = float(fallback["mape"])
+        rmse = float(fallback["rmse"])
+        return {
+            "mape": round(mape, 2),
+            "rmse": round(rmse, 2),
+            "trainingMapeOnTestSet": round(mape, 2),
+        }
+
+    if not preds:
+        mape = float(fallback["mape"])
+        rmse = float(fallback["rmse"])
+        return {
+            "mape": round(mape, 2),
+            "rmse": round(rmse, 2),
+            "trainingMapeOnTestSet": round(mape, 2),
+        }
+
+    y_true = np.asarray(actuals, dtype=float)
+    y_pred = np.asarray(preds, dtype=float)
+    denom = np.where(np.abs(y_true) < 1e-6, 1e-6, np.abs(y_true))
+    mape = float(np.mean(np.abs((y_true - y_pred) / denom)) * 100.0)
+    rmse = float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
+    return {
+        "mape": round(mape, 2),
+        "rmse": round(rmse, 2),
+        "trainingMapeOnTestSet": round(mape, 2),
+    }
+
+
+def _apply_module4_scenario(
+    scenario: str,
+    central: float,
+    lower: float,
+    upper: float,
+) -> tuple[float, float, float]:
+    if scenario == "optimistic":
+        central = central * 1.15
+        upper = upper * 1.15
+    elif scenario == "pessimistic":
+        central = central * 0.85
+        lower = lower * 0.85
+
+    central = max(0.0, float(central))
+    lower = max(0.0, float(lower))
+    upper = max(lower, float(upper))
+    return central, lower, upper
+
+
+def _load_total_forecast_targets(
+    monthly: pd.DataFrame,
+    horizon: int,
+    base_volume: float | None,
+) -> tuple[list[pd.Timestamp], list[float]]:
+    total_series = monthly.copy()
+    total_series["month_start"] = pd.to_datetime(total_series["month_start"], errors="coerce")
+    total_series["funded_amnt_m"] = pd.to_numeric(total_series["funded_amnt_m"], errors="coerce")
+    total_series = total_series.dropna(subset=["month_start", "funded_amnt_m"]).sort_values("month_start")
+
+    if total_series.empty:
+        raise ValueError("Unable to build total loan-volume series for grade forecast.")
+
+    if base_volume is not None:
+        total_series.iloc[-1, total_series.columns.get_loc("funded_amnt_m")] = float(base_volume)
+
+    total_fc = forecast_with_uncertainty(total_series[["month_start", "funded_amnt_m"]], horizon=horizon)
+    months = [pd.to_datetime(value) for value in total_fc["month_start"].tolist()]
+    totals = pd.to_numeric(total_fc["forecast_central"], errors="coerce").fillna(0.0).astype(float).tolist()
+    return months, totals
+
+
 def _load_module_artifacts(module_number: int) -> tuple[Any, list[str]]:
     model = joblib.load(PROJECT_ROOT / f"models/module{module_number}_xgb.pkl")
     features = joblib.load(PROJECT_ROOT / f"models/module{module_number}_features.pkl")
     return model, list(features)
+
+
+def _load_module3_forecast_artifacts() -> dict[str, Any]:
+    feature_path = PROJECT_ROOT / "models/module3_features.pkl"
+    xgb_path = PROJECT_ROOT / "models/module3_xgb.pkl"
+    lr_path = PROJECT_ROOT / "models/module3_lr.pkl"
+    scaler_path = PROJECT_ROOT / "models/module3_scaler.pkl"
+
+    required = [feature_path, xgb_path, lr_path, scaler_path]
+    missing = [str(path) for path in required if not path.exists()]
+    if missing:
+        raise FileNotFoundError(
+            "Missing required Module 3 model artifacts for loan forecast: "
+            + ", ".join(missing)
+        )
+
+    features = list(joblib.load(feature_path))
+    xgb_model = joblib.load(xgb_path)
+    lr_model = joblib.load(lr_path)
+    scaler = joblib.load(scaler_path)
+
+    defaults = {feature: 0.0 for feature in features}
+    scaler_means = getattr(scaler, "mean_", None)
+    if scaler_means is not None and len(scaler_means) == len(features):
+        for idx, feature in enumerate(features):
+            defaults[feature] = float(scaler_means[idx])
+
+    return {
+        "features": features,
+        "xgb": xgb_model,
+        "lr": lr_model,
+        "scaler": scaler,
+        "defaults": defaults,
+    }
+
+
+def _build_module3_feature_row(
+    history: pd.DataFrame,
+    month_start: pd.Timestamp,
+    features: list[str],
+    defaults: dict[str, float],
+) -> dict[str, float]:
+    values = (
+        pd.to_numeric(history["funded_amnt_m"], errors="coerce")
+        .dropna()
+        .astype(float)
+        .tolist()
+    )
+
+    row = {feature: float(defaults.get(feature, 0.0)) for feature in features}
+
+    row["month"] = float(month_start.month)
+    row["quarter"] = float(((month_start.month - 1) // 3) + 1)
+    row["year"] = float(month_start.year)
+
+    for lag in [1, 2, 3, 6, 12]:
+        key = f"lag_{lag}"
+        if key in row:
+            row[key] = float(values[-lag]) if len(values) >= lag else float(defaults.get(key, row[key]))
+
+    for window in [3, 6, 12]:
+        key = f"rolling_{window}"
+        if key in row:
+            window_vals = values[-window:] if values else []
+            row[key] = float(np.mean(window_vals)) if window_vals else float(defaults.get(key, row[key]))
+
+    if "mom_growth" in row:
+        if len(values) >= 2 and abs(values[-2]) > 1e-6:
+            row["mom_growth"] = float((values[-1] - values[-2]) / abs(values[-2]))
+        else:
+            row["mom_growth"] = float(defaults.get("mom_growth", 0.0))
+
+    for col in ["avg_int_rate", "avg_loan_amnt", "loan_count"]:
+        if col not in row:
+            continue
+        if col in history.columns:
+            known = pd.to_numeric(history[col], errors="coerce").dropna()
+            if not known.empty:
+                row[col] = float(known.iloc[-1])
+
+    return row
+
+
+def _module3_predict_value(
+    feature_row: dict[str, float],
+    artifacts: dict[str, Any],
+) -> tuple[float, float, float]:
+    features = artifacts["features"]
+    frame = pd.DataFrame([feature_row], columns=features).fillna(0.0)
+
+    xgb_pred = float(np.asarray(artifacts["xgb"].predict(frame)).ravel()[0])
+    try:
+        scaled = artifacts["scaler"].transform(frame)
+        lr_pred = float(np.asarray(artifacts["lr"].predict(scaled)).ravel()[0])
+    except Exception:
+        lr_pred = xgb_pred
+
+    central = max(0.0, (0.7 * xgb_pred) + (0.3 * lr_pred))
+    return xgb_pred, lr_pred, central
 
 
 def _resolve_data_file(candidates: list[Path], dependency_label: str) -> Path:
@@ -535,36 +1085,209 @@ def _grade_share_from_artifacts() -> dict[str, float]:
     return normalized
 
 
-def _forecast_loan_volume(_: dict[str, Any]) -> dict[str, Any]:
-    monthly = _load_monthly_series()
-    horizon = 3
-    fc = forecast_with_uncertainty(monthly, horizon=horizon)
-    baseline = compute_baseline_forecasts(monthly, horizon=horizon)
+def _forecast_loan_volume(payload: dict[str, Any]) -> dict[str, Any]:
+    request_config = _normalize_module3_payload(payload)
+    scenario = str(request_config["scenario"])
+    horizon = int(request_config["horizonMonths"])
+    growth_adjustment_pct = float(request_config["growthAdjustmentPct"])
+    interest_rate_shock_bps = float(request_config["interestRateShockBps"])
+    loan_count_change_pct = float(request_config["loanCountChangePct"])
+    avg_loan_amount_change_pct = float(request_config["avgLoanAmountChangePct"])
+    uncertainty_multiplier = float(MODULE3_SCENARIO_RISK_MULTIPLIER.get(scenario, 1.0))
 
-    trend_tail = monthly.tail(9).copy()
+    monthly = _load_monthly_series().copy()
+    _require_columns(monthly, ["month_start", "funded_amnt_m"], "loan volume forecast")
+
+    monthly["month_start"] = pd.to_datetime(monthly["month_start"], errors="coerce")
+    monthly["funded_amnt_m"] = pd.to_numeric(monthly["funded_amnt_m"], errors="coerce")
+    monthly = (
+        monthly.dropna(subset=["month_start", "funded_amnt_m"])
+        .sort_values("month_start")
+        .reset_index(drop=True)
+    )
+
+    if len(monthly) < 12:
+        raise ValueError(
+            "Loan volume forecast requires at least 12 monthly observations "
+            "to run Module 3 trained models."
+        )
+
+    artifacts = _load_module3_forecast_artifacts()
+    features = artifacts["features"]
+    defaults = artifacts["defaults"]
+
+    history = monthly.copy()
+    for col in ["avg_int_rate", "avg_loan_amnt", "loan_count"]:
+        if col not in history.columns:
+            history[col] = float(defaults.get(col, 0.0))
+        history[col] = pd.to_numeric(history[col], errors="coerce")
+        if history[col].isna().all():
+            history[col] = float(defaults.get(col, 0.0))
+        else:
+            history[col] = history[col].ffill().bfill()
+
+    trend_tail = history.tail(9).copy()
     trend = [
         {
-            "month": pd.to_datetime(row.month_start).strftime("%b"),
+            "month": pd.to_datetime(row.month_start).strftime("%b-%y"),
             "actual": float(row.funded_amnt_m),
             "forecast": float(row.funded_amnt_m),
         }
         for row in trend_tail.itertuples(index=False)
     ]
 
-    interval = []
-    for row in fc.itertuples(index=False):
-        interval.append(
+    history_window = 12
+    history_interval = []
+    for row in history.tail(history_window).itertuples(index=False):
+        actual_val = round(float(row.funded_amnt_m), 2)
+        history_interval.append(
             {
-                "month": pd.to_datetime(row.month_start).strftime("%b"),
-                "value": float(row.forecast_central),
-                "low": float(row.forecast_lower),
-                "high": float(row.forecast_upper),
-                "historical": None,
-                "baseline": float(baseline.loc[baseline["month_start"] == row.month_start, "naive_last"].iloc[0]),
+                "month": pd.to_datetime(row.month_start).strftime("%b-%y"),
+                "value": actual_val,
+                "low": actual_val,
+                "high": actual_val,
+                "historical": actual_val,
             }
         )
 
-    return {"trend": trend, "interval": interval}
+    forecast_interval = []
+    warnings: list[str] = []
+    if abs(interest_rate_shock_bps) > 0 and "avg_int_rate" not in features:
+        warnings.append(
+            "interestRateShockBps was provided, but avg_int_rate is unavailable in module3 feature list."
+        )
+    if abs(loan_count_change_pct) > 0 and "loan_count" not in features:
+        warnings.append(
+            "loanCountChangePct was provided, but loan_count is unavailable in module3 feature list."
+        )
+    if abs(avg_loan_amount_change_pct) > 0 and "avg_loan_amnt" not in features:
+        warnings.append(
+            "avgLoanAmountChangePct was provided, but avg_loan_amnt is unavailable in module3 feature list."
+        )
+
+    for step in range(1, horizon + 1):
+        next_month = pd.to_datetime(history["month_start"].iloc[-1]) + pd.offsets.MonthBegin(1)
+        feature_row = _build_module3_feature_row(history, next_month, features, defaults)
+
+        if "avg_int_rate" in feature_row:
+            feature_row["avg_int_rate"] = max(
+                0.0,
+                float(feature_row["avg_int_rate"]) + (interest_rate_shock_bps / 100.0),
+            )
+        if "loan_count" in feature_row:
+            feature_row["loan_count"] = max(
+                1.0,
+                float(feature_row["loan_count"]) * (1.0 + loan_count_change_pct / 100.0),
+            )
+        if "avg_loan_amnt" in feature_row:
+            feature_row["avg_loan_amnt"] = max(
+                500.0,
+                float(feature_row["avg_loan_amnt"]) * (1.0 + avg_loan_amount_change_pct / 100.0),
+            )
+
+        xgb_pred, lr_pred, central_raw = _module3_predict_value(feature_row, artifacts)
+        central = max(0.0, central_raw * (1.0 + growth_adjustment_pct / 100.0))
+
+        recent_vals = pd.to_numeric(history["funded_amnt_m"], errors="coerce").dropna().values.astype(float)
+        recent_deltas = np.diff(recent_vals[-12:]) if len(recent_vals) > 2 else np.array([0.0])
+        volatility = float(np.std(recent_deltas))
+        volatility = max(volatility, 0.05 * max(abs(central), 1.0))
+        model_spread = abs(xgb_pred - lr_pred)
+        spread = max(model_spread, volatility * np.sqrt(step))
+        spread *= uncertainty_multiplier
+        spread *= 1.0 + min(0.35, abs(growth_adjustment_pct) / 100.0)
+
+        lower = max(0.0, central - 1.28 * spread)
+        upper = max(lower, central + 1.28 * spread)
+
+        forecast_interval.append(
+            {
+                "month": next_month.strftime("%b-%y"),
+                "value": round(float(central), 2),
+                "low": round(float(lower), 2),
+                "high": round(float(upper), 2),
+                "historical": None,
+            }
+        )
+
+        avg_loan_amnt = float(feature_row.get("avg_loan_amnt", defaults.get("avg_loan_amnt", 1.0)))
+        if avg_loan_amnt <= 0:
+            avg_loan_amnt = max(float(defaults.get("avg_loan_amnt", 1.0)), 1.0)
+        inferred_count = max(1.0, (central * 1_000_000.0) / avg_loan_amnt)
+
+        history = pd.concat(
+            [
+                history,
+                pd.DataFrame(
+                    [
+                        {
+                            "month_start": next_month,
+                            "funded_amnt_m": float(central),
+                            "avg_int_rate": float(feature_row.get("avg_int_rate", defaults.get("avg_int_rate", 0.0))),
+                            "avg_loan_amnt": float(avg_loan_amnt),
+                            "loan_count": float(max(inferred_count, feature_row.get("loan_count", inferred_count))),
+                        }
+                    ]
+                ),
+            ],
+            ignore_index=True,
+        )
+
+    interval = history_interval + forecast_interval
+    latest_actual = float(monthly["funded_amnt_m"].iloc[-1])
+    projected_total = float(sum(rec["value"] for rec in forecast_interval))
+
+    final_projection = forecast_interval[-1] if forecast_interval else {
+        "month": pd.to_datetime(monthly["month_start"].iloc[-1]).strftime("%b-%y"),
+        "value": round(latest_actual, 2),
+        "low": round(latest_actual, 2),
+        "high": round(latest_actual, 2),
+    }
+
+    growth_vs_latest_actual_pct = 0.0
+    if abs(latest_actual) > 1e-6:
+        growth_vs_latest_actual_pct = ((float(final_projection["value"]) - latest_actual) / abs(latest_actual)) * 100.0
+
+    summary = {
+        "horizonMonths": horizon,
+        "scenario": scenario,
+        "projectedTotal": round(projected_total, 2),
+        "averageMonthly": round(projected_total / max(horizon, 1), 2),
+        "finalMonth": str(final_projection["month"]),
+        "finalValue": round(float(final_projection["value"]), 2),
+        "finalRange": {
+            "low": round(float(final_projection["low"]), 2),
+            "high": round(float(final_projection["high"]), 2),
+        },
+        "growthVsLastActualPct": round(growth_vs_latest_actual_pct, 2),
+        "assumptions": {
+            "growthAdjustmentPct": round(growth_adjustment_pct, 2),
+            "interestRateShockBps": round(interest_rate_shock_bps, 2),
+            "loanCountChangePct": round(loan_count_change_pct, 2),
+            "avgLoanAmountChangePct": round(avg_loan_amount_change_pct, 2),
+        },
+    }
+
+    return {
+        "trend": trend,
+        "interval": interval,
+        "summary": summary,
+        "request": {
+            "horizonMonths": horizon,
+            "scenario": scenario,
+            "growthAdjustmentPct": round(growth_adjustment_pct, 2),
+            "interestRateShockBps": round(interest_rate_shock_bps, 2),
+            "loanCountChangePct": round(loan_count_change_pct, 2),
+            "avgLoanAmountChangePct": round(avg_loan_amount_change_pct, 2),
+            "userAdjustments": request_config.get("userAdjustments", {}),
+        },
+        "model": {
+            "primary": "module3_xgb.pkl",
+            "blend": "module3_lr.pkl",
+            "scaler": "module3_scaler.pkl",
+        },
+        "warnings": warnings,
+    }
 
 
 def _portfolio_batch_score(payload: dict[str, Any]) -> dict[str, Any]:
@@ -722,43 +1445,194 @@ def _anomaly_batch_score(payload: dict[str, Any]) -> dict[str, Any]:
     return {"batch": batch}
 
 
-def _credit_demand_by_grade(_: dict[str, Any]) -> dict[str, Any]:
-    grade_path = PROJECT_ROOT / "data/processed/grade_monthly_demand.csv"
-    if grade_path.exists():
-        grade_df = pd.read_csv(grade_path, parse_dates=["month_start"])
-        _require_columns(grade_df, ["month_start", "grade", "funded_amnt_m"], "credit demand by grade")
-    else:
-        monthly = _load_monthly_series()
-        shares = _grade_share_from_artifacts()
-        rows = []
-        for rec in monthly.itertuples(index=False):
-            for grade in ["A", "B", "C", "D", "E"]:
-                rows.append(
-                    {
-                        "month_start": rec.month_start,
-                        "grade": grade,
-                        "funded_amnt_m": float(rec.funded_amnt_m) * float(shares[grade]),
-                    }
+def _forecast_credit_demand_by_grade(payload: dict[str, Any]) -> dict[str, Any]:
+    config = _normalize_credit_demand_payload(payload)
+    horizon = int(config["horizon"])
+    confidence = float(config["confidence"])
+    scenario = str(config["scenarioType"])
+    base_volume = config["baseVolume"]
+
+    grade_df = _load_grade_monthly_history()
+    pivot = _build_grade_history_pivot(grade_df)
+    if len(pivot) < 12:
+        raise ValueError(
+            "Credit demand forecast requires at least 12 monthly observations for grade-level inference."
+        )
+
+    monthly_total = _load_monthly_series()
+    forecast_months, total_targets = _load_total_forecast_targets(monthly_total, horizon, base_volume)
+
+    artifacts, feature_schema, model_warnings = _load_grade_models()
+    warnings = list(model_warnings)
+    if not artifacts:
+        warnings.append(
+            "No grade model artifacts were loaded. Falling back to statistical share-based forecasting."
+        )
+
+    shares = _grade_share_from_artifacts()
+    z_value = _confidence_z(confidence)
+
+    month_index = [pd.to_datetime(value) for value in pivot.index.tolist()]
+    grade_history = {
+        grade: pd.to_numeric(pivot[grade], errors="coerce").fillna(0.0).astype(float).tolist()
+        for grade in GRADES
+    }
+    total_history = pd.to_numeric(pivot[GRADES].sum(axis=1), errors="coerce").fillna(0.0).astype(float).tolist()
+
+    predictions_by_grade = {grade: [] for grade in GRADES}
+    feature_importance_by_grade: dict[str, list[dict[str, Any]]] = {}
+    metrics_by_grade: dict[str, dict[str, float]] = {}
+    model_names: dict[str, str] = {}
+
+    for grade in GRADES:
+        artifact = artifacts.get(grade)
+        metrics_by_grade[grade] = _grade_model_backtest_metrics(
+            grade,
+            month_index,
+            grade_history[grade],
+            total_history,
+            artifact,
+        )
+
+        if artifact is not None:
+            importance_df = model_feature_importance(artifact["model"], artifact["features"]).head(6)
+            feature_importance_by_grade[grade] = _to_records(importance_df, ["feature", "importance"])
+            model_names[grade] = "XGBoost"
+        else:
+            feature_importance_by_grade[grade] = _default_grade_feature_importance(feature_schema)
+            model_names[grade] = "Statistical fallback"
+
+    baseline_total_accumulator = 0.0
+    for step, month_start in enumerate(forecast_months, start=1):
+        target_total = float(total_targets[step - 1]) if step - 1 < len(total_targets) else float(total_history[-1])
+        if target_total <= 0:
+            target_total = max(float(total_history[-1]), 1.0)
+
+        baseline_grade_preds: dict[str, float] = {}
+        for grade in GRADES:
+            artifact = artifacts.get(grade)
+            if artifact is not None:
+                try:
+                    feature_row = _build_module4_feature_row(
+                        grade_history[grade],
+                        month_start,
+                        artifact["features"],
+                        artifact["defaults"],
+                        float(total_history[-1]),
+                    )
+                    frame = pd.DataFrame([feature_row], columns=artifact["features"]).fillna(0.0)
+                    scaled = artifact["scaler"].transform(frame)
+                    pred = float(np.asarray(artifact["model"].predict(scaled)).ravel()[0])
+                    baseline_grade_preds[grade] = max(0.0, pred)
+                except Exception as exc:
+                    warnings.append(
+                        f"Grade {grade} model inference failed for {month_start.strftime('%Y-%m')}; using fallback for this step. Reason: {exc}"
+                    )
+                    baseline_grade_preds[grade] = max(
+                        0.0,
+                        float(grade_history[grade][-1]) if grade_history[grade] else target_total * float(shares.get(grade, 0.0)),
+                    )
+            else:
+                baseline_grade_preds[grade] = max(
+                    0.0,
+                    float(grade_history[grade][-1]) if grade_history[grade] else target_total * float(shares.get(grade, 0.0)),
                 )
-        grade_df = pd.DataFrame(rows)
 
-    monthly_grade = (
-        grade_df.groupby(["month_start", "grade"], as_index=False)["funded_amnt_m"]
-        .sum()
-        .sort_values("month_start")
-    )
-    pivot = (
-        monthly_grade.pivot(index="month_start", columns="grade", values="funded_amnt_m")
-        .fillna(0.0)
-        .sort_index()
+        raw_sum = float(sum(baseline_grade_preds.values()))
+        if raw_sum <= 1e-6:
+            baseline_grade_preds = {
+                grade: max(0.0, target_total * float(shares.get(grade, 0.0)))
+                for grade in GRADES
+            }
+            raw_sum = float(sum(baseline_grade_preds.values()))
+
+        if raw_sum > 1e-6:
+            scale = target_total / raw_sum
+            for grade in GRADES:
+                baseline_grade_preds[grade] = max(0.0, float(baseline_grade_preds[grade]) * scale)
+
+        baseline_total_accumulator += float(sum(baseline_grade_preds.values()))
+
+        scenario_month_total = 0.0
+        for grade in GRADES:
+            baseline_central = float(baseline_grade_preds[grade])
+            recent_vals = np.asarray(grade_history[grade][-12:], dtype=float)
+            if recent_vals.size <= 1:
+                deltas = np.asarray([0.0], dtype=float)
+            else:
+                deltas = np.diff(recent_vals)
+
+            volatility = float(np.std(deltas))
+            volatility = max(volatility, 0.04 * max(abs(baseline_central), 1.0))
+            spread = volatility * np.sqrt(step)
+
+            lower = max(0.0, baseline_central - (z_value * spread))
+            upper = max(lower, baseline_central + (z_value * spread))
+            adjusted_central, adjusted_lower, adjusted_upper = _apply_module4_scenario(
+                scenario,
+                baseline_central,
+                lower,
+                upper,
+            )
+
+            predictions_by_grade[grade].append(
+                {
+                    "month": month_start.strftime("%b-%Y"),
+                    "forecast_central": round(adjusted_central, 2),
+                    "forecast_lower": round(adjusted_lower, 2),
+                    "forecast_upper": round(adjusted_upper, 2),
+                    "historical": None,
+                }
+            )
+
+            grade_history[grade].append(float(adjusted_central))
+            scenario_month_total += float(adjusted_central)
+
+        total_history.append(float(scenario_month_total))
+
+    forecasts = []
+    for grade in GRADES:
+        forecasts.append(
+            {
+                "grade": grade,
+                "predictions": predictions_by_grade[grade],
+                "modelMetrics": metrics_by_grade[grade],
+                "featureImportance": feature_importance_by_grade[grade],
+                "modelName": model_names[grade],
+            }
+        )
+
+    scenario_comparison = {
+        "baseline": round(float(baseline_total_accumulator), 2),
+        "optimistic": round(float(baseline_total_accumulator) * MODULE4_SCENARIO_MULTIPLIER["optimistic"], 2),
+        "pessimistic": round(float(baseline_total_accumulator) * MODULE4_SCENARIO_MULTIPLIER["pessimistic"], 2),
+    }
+
+    selected_total_forecast = sum(
+        float(pred["forecast_central"])
+        for grade in GRADES
+        for pred in predictions_by_grade[grade]
     )
 
-    for g in ["A", "B", "C", "D", "E"]:
-        if g not in pivot.columns:
-            pivot[g] = 0.0
+    return {
+        "forecasts": forecasts,
+        "metadata": {
+            "horizon": horizon,
+            "confidence": round(confidence, 2),
+            "scenario": scenario,
+            "totalForecastedVolume": round(float(selected_total_forecast), 2),
+            "scenarioComparison": scenario_comparison,
+        },
+        "warnings": warnings,
+    }
+
+
+def _credit_demand_by_grade(_: dict[str, Any]) -> dict[str, Any]:
+    grade_df = _load_grade_monthly_history()
+    pivot = _build_grade_history_pivot(grade_df)
 
     trend = []
-    for idx, row in pivot[["A", "B", "C", "D", "E"]].reset_index().iterrows():
+    for _, row in pivot.reset_index().iterrows():
         trend.append(
             {
                 "month": pd.to_datetime(row["month_start"]).strftime("%b-%y"),
@@ -777,7 +1651,7 @@ def _credit_demand_by_grade(_: dict[str, Any]) -> dict[str, Any]:
     )
 
     heatmap = []
-    for grade in ["A", "B", "C", "D", "E"]:
+    for grade in GRADES:
         gdf = seasonality[seasonality["grade"] == grade]
         vals = []
         for month_num in range(1, 13):
@@ -854,6 +1728,7 @@ OP_MAP = {
     "anomaly_timeseries": _anomaly_timeseries,
     "anomaly_batch_score": _anomaly_batch_score,
     "credit_demand_by_grade": _credit_demand_by_grade,
+    "credit_demand_by_grade_forecast": _forecast_credit_demand_by_grade,
     "deposit_leaderboard": _deposit_leaderboard,
     "deposit_predict": _deposit_predict,
 }

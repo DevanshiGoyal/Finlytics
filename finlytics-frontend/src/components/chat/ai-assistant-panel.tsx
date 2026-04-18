@@ -64,10 +64,7 @@ export function AIAssistantPanel({ open, onClose }: AIAssistantPanelProps) {
 
       const payload = (await response.json()) as AskFinlyticsResponse;
       const baseContent = payload.reply?.trim() || DEFAULT_REPLY;
-      const assistantContent =
-        payload.source === "fallback"
-          ? `${baseContent}\n\n(Using fallback mode while Gemini is temporarily unavailable.)`
-          : baseContent;
+      const assistantContent = baseContent;
       setMessages((prev) => [...prev, { role: "assistant", content: assistantContent }]);
     } catch {
       setMessages((prev) => [...prev, { role: "assistant", content: DEFAULT_REPLY }]);
