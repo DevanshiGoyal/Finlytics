@@ -104,8 +104,10 @@ export default function BorrowerChurnPage() {
       });
       setResult(response);
       toast.success("Churn probability generated");
-    } catch {
-      toast.error("Churn prediction failed");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Churn prediction failed";
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }

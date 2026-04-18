@@ -18,7 +18,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const stored = localStorage.getItem("finlytics-theme");
     const isDark = stored !== "light";
     setDarkMode(isDark);
-    document.documentElement.classList.toggle("dark", isDark);
+    document.documentElement.classList.toggle("dark", darkMode);
   }, []);
 
   const toggleTheme = () => {

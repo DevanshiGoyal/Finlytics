@@ -14,32 +14,110 @@ export type {
 
 type JsonBody = Record<string, unknown>;
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+function normaliseBaseUrl(url: string): string {
+  return url.trim().replace(/\/+$/, "");
+}
 
-async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options?.headers || {}),
-    },
-  });
+const DEFAULT_LOCAL_API_BASE = "http://127.0.0.1:8000";
+const API_BASE = normaliseBaseUrl(
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+    (process.env.NODE_ENV === "development" ? DEFAULT_LOCAL_API_BASE : "")
+);
+const TALK_TO_DATA_API_BASE = normaliseBaseUrl(
+  process.env.NEXT_PUBLIC_TALK_TO_DATA_API_BASE_URL || API_BASE
+);
+
+type ContentTypeMode = "json" | "none";
+
+function parseErrorMessage(status: number, raw: string): string {
+  let message = `API request failed: ${status}`;
+
+  if (!raw) {
+    return message;
+  }
+
+  const trimmed = raw.trim();
+  if (/^<!doctype html>/i.test(trimmed) || /^<html/i.test(trimmed)) {
+    return `${message} - received an HTML page instead of API JSON. Check NEXT_PUBLIC_API_BASE_URL (or NEXT_PUBLIC_TALK_TO_DATA_API_BASE_URL).`;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as {
+      detail?: unknown;
+      error?: string;
+      message?: string;
+    };
+
+    if (typeof parsed.detail === "string" && parsed.detail.trim()) {
+      return parsed.detail;
+    }
+
+    if (typeof parsed.error === "string" && parsed.error.trim()) {
+      return parsed.error;
+    }
+
+    if (typeof parsed.message === "string" && parsed.message.trim()) {
+      return parsed.message;
+    }
+
+    if (parsed.detail) {
+      return `${message} - ${JSON.stringify(parsed.detail)}`;
+    }
+
+    return message;
+  } catch {
+    return `${message} - ${raw}`;
+  }
+}
+
+async function requestWithBase<T>(
+  baseUrl: string,
+  endpoint: string,
+  options?: RequestInit,
+  contentType: ContentTypeMode = "json"
+): Promise<T> {
+  const finalBase = normaliseBaseUrl(baseUrl);
+  const finalEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+
+  const headers = new Headers(options?.headers);
+  if (contentType === "json" && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${finalBase}${finalEndpoint}`, {
+      ...options,
+      headers,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(
+        `Network error while calling ${finalBase}${finalEndpoint}. Ensure the backend is running and allows requests from this frontend origin (CORS).`
+      );
+    }
+
+    throw error;
+  }
 
   if (!response.ok) {
-    let message = `API request failed: ${response.status}`;
     const raw = await response.text();
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw) as { error?: string; message?: string };
-        message = parsed.error || parsed.message || message;
-      } catch {
-        message = `${message} - ${raw}`;
-      }
-    }
-    throw new Error(message);
+    throw new Error(parseErrorMessage(response.status, raw));
   }
 
   return (await response.json()) as T;
+}
+
+async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  return requestWithBase<T>(API_BASE, endpoint, options, "json");
+}
+
+async function requestTalkToData<T>(
+  endpoint: string,
+  options?: RequestInit,
+  contentType: ContentTypeMode = "json"
+): Promise<T> {
+  return requestWithBase<T>(TALK_TO_DATA_API_BASE, endpoint, options, contentType);
 }
 
 export type FeatureImportance = Array<{ feature: string; importance: number }>;
@@ -323,5 +401,145 @@ export async function forecastCreditDemandByGrade(payload: CreditDemandForecastR
   return request<CreditDemandForecastResponse>("/credit-demand/by-grade", {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+export type TalkToDataMode = "raw" | "smart" | "scalable";
+
+export interface TalkToDataColumnInfo {
+  name: string;
+  type: string;
+  null_pct: number;
+  mean?: number | null;
+  min?: number | null;
+  max?: number | null;
+  unique_count?: number | null;
+}
+
+export interface TalkToDataUploadResponse {
+  dataset_id: string;
+  filename: string;
+  row_count: number;
+  columns: TalkToDataColumnInfo[];
+  sample: Array<Record<string, unknown>>;
+  suggested_questions: string[];
+}
+
+export interface TalkToDataHealth {
+  missing_pct: number;
+  outliers: number;
+  rows_used: number;
+  confidence: number;
+  confidence_level?: string;
+  confidence_reason?: string[];
+  summary_text?: string;
+  penalty_breakdown?: Record<string, number>;
+}
+
+export interface TalkToDataQueryResponse {
+  sql: string;
+  result: Array<Record<string, unknown>>;
+  columns: string[];
+  explanation: string;
+  insights: string[];
+  chart_type?: string | null;
+  chart_x?: string | null;
+  chart_y: string[];
+  data_health: TalkToDataHealth;
+  preprocessing_log: string[];
+  mode: TalkToDataMode;
+  why_analysis?: string | null;
+  error?: string | null;
+}
+
+export interface TalkToDataChartDataset {
+  chart_type: string;
+  chart_x: string;
+  chart_y: string[];
+  result: Array<Record<string, unknown>>;
+  title: string;
+  sql: string;
+}
+
+export interface TalkToDataAutoVisualizeResponse {
+  trend?: TalkToDataChartDataset | null;
+  composition?: TalkToDataChartDataset | null;
+  comparison?: TalkToDataChartDataset | null;
+  summary_stats?: Record<string, unknown>;
+}
+
+export interface TalkToDataCorrelationPoint {
+  col_a: string;
+  col_b: string;
+  correlation: number | null;
+}
+
+export interface TalkToDataCorrelationResponse {
+  columns: string[];
+  data: TalkToDataCorrelationPoint[];
+  method: string;
+  note: string;
+}
+
+export async function uploadTalkToDataCSV(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return requestTalkToData<TalkToDataUploadResponse>("/upload", {
+    method: "POST",
+    body: formData,
+  }, "none");
+}
+
+export async function queryTalkToData(payload: {
+  datasetId: string;
+  question: string;
+  mode: TalkToDataMode;
+  sessionId?: string;
+}) {
+  return requestTalkToData<TalkToDataQueryResponse>("/query", {
+    method: "POST",
+    body: JSON.stringify({
+      dataset_id: payload.datasetId,
+      question: payload.question,
+      mode: payload.mode,
+      session_id: payload.sessionId,
+    }),
+  });
+}
+
+export async function getTalkToDataHealth(payload: { datasetId: string; mode: TalkToDataMode }) {
+  return requestTalkToData<TalkToDataHealth>("/data-health", {
+    method: "POST",
+    body: JSON.stringify({
+      dataset_id: payload.datasetId,
+      mode: payload.mode,
+    }),
+  });
+}
+
+export async function getTalkToDataAutoVisualize(payload: {
+  datasetId: string;
+  mode: TalkToDataMode;
+}) {
+  return requestTalkToData<TalkToDataAutoVisualizeResponse>("/auto-visualize", {
+    method: "POST",
+    body: JSON.stringify({
+      dataset_id: payload.datasetId,
+      mode: payload.mode,
+    }),
+  });
+}
+
+export async function getTalkToDataCorrelationMatrix(payload: {
+  datasetId: string;
+  method?: "pearson" | "spearman" | "kendall";
+}) {
+  return requestTalkToData<TalkToDataCorrelationResponse>("/correlation-matrix", {
+    method: "POST",
+    body: JSON.stringify({
+      dataset_id: payload.datasetId,
+      method: payload.method ?? "pearson",
+    }),
   });
 }

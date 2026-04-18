@@ -276,46 +276,63 @@ async function generateGeminiSuggestions(
 
   for (const model of modelsToTry) {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-    const geminiResponse = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-      body: JSON.stringify({
-        system_instruction: {
-          parts: [{ text: buildSystemInstruction() }],
+    let geminiResponse: Response;
+    try {
+      geminiResponse = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }],
+        cache: "no-store",
+        body: JSON.stringify({
+          system_instruction: {
+            parts: [{ text: buildSystemInstruction() }],
           },
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          topP: 0.9,
-          maxOutputTokens: 700,
-          thinkingConfig: {
-            thinkingBudget: 0,
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: prompt }],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            topP: 0.9,
+            maxOutputTokens: 700,
+            thinkingConfig: {
+              thinkingBudget: 0,
+            },
           },
-        },
-      }),
-    });
+        }),
+      });
+    } catch (error) {
+      lastError =
+        error instanceof Error
+          ? `Gemini request threw on model '${model}': ${error.message}`
+          : `Gemini request threw on model '${model}'.`;
+      continue;
+    }
 
     if (geminiResponse.ok) {
-      const responsePayload = (await geminiResponse.json()) as GeminiResponse;
-      const text = extractText(responsePayload);
-      const structured = parseJsonObject(text);
-      if (structured) {
-        const suggestions = flattenStructuredSuggestions(structured);
-        if (suggestions.length >= 4) {
-          return {
-            suggestions,
-            source: "gemini",
-            model,
-          };
+      try {
+        const responsePayload = (await geminiResponse.json()) as GeminiResponse;
+        const text = extractText(responsePayload);
+        const structured = parseJsonObject(text);
+        if (structured) {
+          const suggestions = flattenStructuredSuggestions(structured);
+          if (suggestions.length >= 4) {
+            return {
+              suggestions,
+              source: "gemini",
+              model,
+            };
+          }
         }
+      } catch (error) {
+        lastError =
+          error instanceof Error
+            ? `Gemini JSON parsing failed on model '${model}': ${error.message}`
+            : `Gemini JSON parsing failed on model '${model}'.`;
+        continue;
       }
 
       lastError = "Gemini response was received but did not contain valid structured JSON suggestions.";

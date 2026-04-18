@@ -32,6 +32,11 @@ const DEFAULT_FORECAST_REQUEST: CreditDemandForecastRequest = {
   baseVolume: null,
 };
 
+type ForecastChartRow = {
+  month: string;
+  [key: string]: string | number;
+};
+
 function fmt(value: number) {
   return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
@@ -75,14 +80,14 @@ export default function CreditDemandByGradePage() {
     return map;
   }, [forecastData]);
 
-  const forecastChartData = useMemo(() => {
+  const forecastChartData = useMemo<ForecastChartRow[]>(() => {
     if (!forecastData?.forecasts.length) {
       return [];
     }
 
     const first = forecastData.forecasts[0];
     return first.predictions.map((point, index) => {
-      const row: Record<string, string | number> = {
+      const row: ForecastChartRow = {
         month: point.month,
       };
 

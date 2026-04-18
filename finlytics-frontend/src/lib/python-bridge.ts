@@ -4,8 +4,33 @@ import { existsSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 
-const FRONTEND_ROOT = process.cwd();
-const PROJECT_ROOT = resolve(FRONTEND_ROOT, "..");
+const CWD = process.cwd();
+
+function resolveProjectRoot(): string {
+  const candidates = [CWD, resolve(CWD, "..")];
+  for (const candidate of candidates) {
+    const hasModels = existsSync(join(candidate, "models"));
+    const hasSrc = existsSync(join(candidate, "src"));
+    if (hasModels && hasSrc) {
+      return candidate;
+    }
+  }
+  return resolve(CWD, "..");
+}
+
+const PROJECT_ROOT = resolveProjectRoot();
+
+function resolveFrontendRoot(): string {
+  const candidates = [CWD, join(PROJECT_ROOT, "finlytics-frontend")];
+  for (const candidate of candidates) {
+    if (existsSync(join(candidate, "scripts", "model_bridge.py"))) {
+      return candidate;
+    }
+  }
+  return CWD;
+}
+
+const FRONTEND_ROOT = resolveFrontendRoot();
 const BRIDGE_SCRIPT = join(FRONTEND_ROOT, "scripts", "model_bridge.py");
 const REQUIRED_IMPORT_PROBE = "import joblib, numpy, pandas, sklearn, xgboost";
 
@@ -62,6 +87,10 @@ function detectPythonExecutable(): string {
 }
 
 export async function callPythonBridge<T>(operation: string, payload: unknown): Promise<T> {
+  if (!existsSync(BRIDGE_SCRIPT)) {
+    throw new Error(`Python bridge script not found at '${BRIDGE_SCRIPT}'.`);
+  }
+
   const python = detectPythonExecutable();
 
   return new Promise<T>((resolvePromise, rejectPromise) => {
