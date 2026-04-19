@@ -480,6 +480,21 @@ The frontend will start at http://localhost:3000.
 
 ---
 
+## Tech Stack by Module
+
+| Module                    | ML Models                          | Explainability      | Key Libraries/Tools       |
+|---------------------------|------------------------------------|---------------------|---------------------------|
+| Loan Default Risk   | XGBoost (champ), RF, LR           | SHAP waterfall      | scikit-learn, joblib, pandas |
+| Borrower Churn      | XGBoost, RF, LR                   | SHAP waterfall      | scikit-learn, joblib      |
+| Loan Vol Forecast   | Prophet, XGBoost, LR              | MAPE backtest       | prophet, pandas           |
+| Credit Demand/Grade | XGBoost/RF/LR per grade (A-E)     | Heatmaps/trends     | scikit-learn, matplotlib  |
+| Portfolio Hub       | All above (batch)                 | Global/local SHAP   | pandas, numpy             |
+| Bank Deposit AI     | LR, Decision Tree, RF             | Feature importance  | scikit-learn              |
+| Deposit Anomaly     | Isolation Forest + MLP recon err  | Reason hints        | scikit-learn              |
+
+
+---
+
 ## 11. Testing
 
 Unit tests cover core utility functions for stress testing, deposit prediction, and anomaly scoring.
