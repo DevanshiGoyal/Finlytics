@@ -279,21 +279,21 @@ They open Finlytics every morning. Here is how each tab helps them in real life:
   <tr>
     <td align="center" width="50%">
       <strong>Default Risk - ROC Curve</strong><br />
-      <img src="https://raw.githubusercontent.com/DevanshiGoyal/Finlytics/main/reports/module1_roc_curve.png" alt="Module 1 ROC Curve" width="420" />
+<img src="reports/module1_roc_curve.png" alt="Module 1 ROC Curve" width="420" />
     </td>
     <td align="center" width="50%">
       <strong>Churn - ROC Curve</strong><br />
-      <img src="https://raw.githubusercontent.com/DevanshiGoyal/Finlytics/main/reports/module2_roc_curve.png" alt="Module 2 ROC Curve" width="420" />
+<img src="reports/module2_roc_curve.png" alt="Module 2 ROC Curve" width="420" />
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
       <strong>Loan Volume Forecast</strong><br />
-      <img src="https://raw.githubusercontent.com/DevanshiGoyal/Finlytics/main/reports/module3_forecast.png" alt="Module 3 Forecast" width="420" />
+<img src="reports/module3_forecast.png" alt="Module 3 Forecast" width="420" />
     </td>
     <td align="center" width="50%">
       <strong>Credit Demand by Grade</strong><br />
-      <img src="https://raw.githubusercontent.com/DevanshiGoyal/Finlytics/main/reports/module4_forecast_by_grade.png" alt="Module 4 Forecast By Grade" width="420" />
+<img src="reports/module4_forecast_by_grade.png" alt="Module 4 Forecast By Grade" width="420" />
     </td>
   </tr>
   
