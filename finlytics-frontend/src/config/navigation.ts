@@ -8,7 +8,6 @@ export const navItems: Array<{ label: string; href: Route }> = [
   { label: "Credit Demand by Grade", href: "/credit-demand-by-grade" },
   { label: "Bank Deposit AI", href: "/bank-deposit-ai" },
   { label: "Deposit Anomaly Detection", href: "/deposit-anomaly-detection" },
-  { label: "Data Insight Studio", href: "/talk-to-data" },
   { label: "Wealth Persona Intelligence", href: "/wealth-persona" }
 ];
 
