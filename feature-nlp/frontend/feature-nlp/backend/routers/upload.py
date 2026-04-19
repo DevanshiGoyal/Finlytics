@@ -6,6 +6,7 @@ generates suggested questions via LLM, and registers the dataset.
 import os
 import uuid
 import shutil
+from pathlib import Path
 
 from fastapi import APIRouter, UploadFile, File, HTTPException
 
@@ -16,8 +17,9 @@ from services.llm_service import suggest_questions
 
 router = APIRouter()
 
-UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads")
-os.makedirs(UPLOADS_DIR, exist_ok=True)
+BASE_DIR = Path(__file__).resolve().parent.parent
+UPLOADS_DIR = Path(os.getenv("UPLOADS_DIR", BASE_DIR / "uploads")).resolve()
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @router.post("/upload", response_model=UploadResponse)
@@ -27,10 +29,11 @@ async def upload_csv(file: UploadFile = File(...)) -> UploadResponse:
         raise HTTPException(status_code=400, detail="Only CSV files are supported.")
 
     dataset_id = str(uuid.uuid4())
-    dest_path = os.path.join(UPLOADS_DIR, f"{dataset_id}.csv")
+    dest_path = UPLOADS_DIR / f"{dataset_id}.csv"
 
     # Save file to disk
     try:
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
         with open(dest_path, "wb") as buf:
             shutil.copyfileobj(file.file, buf)
     except Exception as exc:
@@ -38,9 +41,10 @@ async def upload_csv(file: UploadFile = File(...)) -> UploadResponse:
 
     # Analyse CSV
     try:
-        analysis = analyze_csv(dest_path)
+        analysis = analyze_csv(str(dest_path))
     except Exception as exc:
-        os.remove(dest_path)
+        if dest_path.exists():
+            dest_path.unlink()
         raise HTTPException(status_code=422, detail=f"Could not parse CSV: {exc}")
 
     columns = analysis["columns"]
@@ -60,7 +64,7 @@ async def upload_csv(file: UploadFile = File(...)) -> UploadResponse:
 
     # Register in state
     state.datasets[dataset_id] = {
-        "file_path": dest_path,
+        "file_path": str(dest_path),
         "filename": file.filename,
         "row_count": row_count,
         "columns": columns,
