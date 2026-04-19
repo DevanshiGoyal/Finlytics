@@ -36,6 +36,23 @@
 </p>
 
 ---
+## Table of Contents
+* [1. Overview](#1-overview)
+* [2. Why This Project Stands Out](#2-why-this-project-stands-out)
+* [3. Architecture](#3-architecture)
+* [4. Features](#4-features-implemented-and-working)
+* [5. How Each Tab Works](#5-how-each-tab-works)
+* [6. Visual Evidence](#6-visual-evidence-model-outputs)
+* [7. Project Structure](#7-project-structure)
+* [8. Install and Run](#8-install-and-run)
+* [9. Usage Examples](#9-usage-examples)
+* [10. Tech Stack](#10-tech-stack)
+* [11. Testing](#11-testing)
+* [12. Team and Credits](#12-team-and-credits)
+* [13. Future Improvements](#13-future-improvements)
+* [14. Environment Variables](#14-environment-variables)
+* [15. License](#15-license)
+* [16. Authors](#16-authors)
 
 ## 1. Overview
 
