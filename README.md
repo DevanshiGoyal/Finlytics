@@ -95,7 +95,11 @@ Imagine a small lending company where one person checks default risk in Excel, a
   - Hybrid scoring using Isolation Forest + reconstruction error.
   - Live single-transaction scan with reason hints.
   - Batch anomaly scoring with downloadable results.
-
+- Wealth Persona Intelligence
+  - AI-driven customer segmentation using RFM analysis and K-Means clustering.
+  - Generates personas (e.g., Mid-Tier Savers, Low-Activity Accounts, Frequent Transactors) and provides insights.
+  - Identifies high-value “vital few” customers and detects behavioral anomalies with explanations.
+  - Enables personalized targeting, better engagement, and improved retention.
 ---
 
 ## 4.1 Models Used and Comparison Tables
@@ -110,6 +114,7 @@ Imagine a small lending company where one person checks default risk in Excel, a
 | Credit Demand by Grade | Grade-wise regression          | Linear Regression, Random Forest, XGBoost              |
 | Bank Deposit AI        | Binary classification          | Logistic Regression, Decision Tree, Random Forest      |
 | Deposit Anomaly        | Unsupervised anomaly detection | Isolation Forest + MLPRegressor (reconstruction error) |
+| Wealth Persona Intelligence| Customer segmentation (unsupervised) | RFM Analysis + K-Means Clustering            |
 
 ### Performance comparison (dashboard values)
 
@@ -230,6 +235,22 @@ How it works:
 4. A risk trend chart tracks how anomaly scores change over time.
 5. SHAP waterfall on live scans shows which transaction features (for example amount, frequency, or timing) pushed the score toward suspicious classification.
 
+### Tab 8: Wealth Persona Intelligence
+
+Purpose:
+Segment customers into meaningful personas to enable personalized engagement and better decision-making.
+
+How it works:
+
+1. Uses RFM analysis (Recency, Frequency, Monetary) to capture customer behavior.
+2. Applies K-Means clustering to group customers into distinct personas.
+3. Generates persona labels (for example: Mid-Tier Savers, Frequent Transactors, Low-Activity Users).
+4. Provides insights like customer count, transaction patterns, and monetary value for each segment.
+5. Identifies high-value “vital few” customers for targeted focus.
+6. Highlights regional opportunities based on activity and balances.
+7. Detects behavioral anomalies within segments for deeper analysis.
+8. Enables teams to design personalized strategies for retention, growth, and engagement.
+
 Business value:
 Early fraud detection before losses grow, with interpretable evidence that supports faster analyst validation and stronger compliance trust.
 
@@ -249,7 +270,7 @@ They open Finlytics every morning. Here is how each tab helps them in real life:
 - **Credit Demand by Grade** - Riya reviews demand by risk grade to balance the portfolio. "Which grade segment will grow next?"
 - **Bank Deposit AI** - Arjun focuses campaign calls on customers most likely to say yes. "Who will subscribe to our deposit product?"
 - **Deposit Anomaly** - Sara monitors incoming deposits and investigates flagged transactions. "Does this transaction look suspicious?"
-
+- **Wealth Persona Intelligence** - Arjun and Sara identify high-value customer segments and tailor strategies for each persona. They focus on retaining premium users and engaging low-activity ones. "Which customer segment should we target and how?"
 ---
 
 ## 6. Visual Evidence (Model Outputs)
@@ -478,11 +499,10 @@ pytest -q
 
 ## 13. Future Improvements
 
-1. Add role-based authentication and audit trails for secure multi-user usage.
-2. Add continuous model monitoring for drift, calibration, and data quality checks.
-3. Automate retraining pipelines with scheduled jobs and versioned model releases.
-4. Expand explainability with deeper local narratives and counterfactual insights.
-5. Add one-click export for executive decks (PDF/PPT) and stakeholder summaries.
+1. Add continuous model monitoring for drift, calibration, and data quality checks.
+2. Automate retraining pipelines with scheduled jobs and versioned model releases.
+3. Expand explainability with deeper local narratives and counterfactual insights.
+4. Add one-click export for executive decks (PDF/PPT) and stakeholder summaries.
 
 ---
 
