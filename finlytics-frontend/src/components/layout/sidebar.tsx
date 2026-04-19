@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
+  MessageSquare,
   ShieldAlert,
   TrendingUp,
   UserRoundX,
@@ -26,7 +27,8 @@ const iconMap: Record<string, ComponentType<{ className?: string }>> = {
   "Loan Volume Forecast": TrendingUp,
   "Credit Demand by Grade": BarChart3,
   "Bank Deposit AI": WalletCards,
-  "Deposit Anomaly Detection": Activity
+  "Deposit Anomaly Detection": Activity,
+  "DataLens": MessageSquare
 };
 
 interface SidebarProps {

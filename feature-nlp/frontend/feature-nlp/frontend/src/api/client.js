@@ -1,0 +1,94 @@
+const configuredBaseUrl = (import.meta.env.VITE_API_URL || '').trim();
+const BASE = configuredBaseUrl.replace(/\/$/, '');
+
+export async function generateSQL(query) {
+  const res = await fetch(`${BASE}/generate-sql`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'SQL generation failed');
+  }
+
+  return res.json();
+}
+
+export async function uploadCSV(file) {
+  const form = new FormData();
+  form.append('file', file);
+
+  const res = await fetch(`${BASE}/upload`, {
+    method: 'POST',
+    body: form,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Upload failed');
+  }
+  return res.json();
+}
+
+export async function sendQuery({ datasetId, question, mode, sessionId }) {
+  const res = await fetch(`${BASE}/query`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      dataset_id: datasetId,
+      question,
+      mode,
+      session_id: sessionId,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Query failed');
+  }
+  return res.json();
+}
+
+export async function fetchAutoVisualize({ datasetId, mode }) {
+  const res = await fetch(`${BASE}/auto-visualize`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataset_id: datasetId, mode }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Auto-visualize failed');
+  }
+  return res.json();
+}
+
+export async function fetchCorrelationMatrix({ datasetId, method = 'pearson' }) {
+  const res = await fetch(`${BASE}/correlation-matrix`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataset_id: datasetId, method }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Correlation matrix failed');
+  }
+  return res.json();
+}
+
+export async function fetchDataHealth({ datasetId, mode }) {
+  const res = await fetch(`${BASE}/data-health`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataset_id: datasetId, mode }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Health fetch failed');
+  }
+  return res.json();
+}

@@ -1,0 +1,32 @@
+{
+  "table_name": "data",
+  "default_limit": 100,
+  "default_numeric_column": "amount",
+  "columns": [
+    {
+      "name": "amount",
+      "type": "numeric",
+      "aliases": ["amount", "revenue", "sales", "value", "balance", "deposit"]
+    },
+    {
+      "name": "category",
+      "type": "text",
+      "aliases": ["category", "segment", "type", "group"]
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "aliases": ["status", "state"]
+    },
+    {
+      "name": "customer_id",
+      "type": "text",
+      "aliases": ["customer", "client", "customer id", "client id"]
+    },
+    {
+      "name": "created_at",
+      "type": "date",
+      "aliases": ["date", "day", "month", "year", "time", "created", "created at"]
+    }
+  ]
+}
