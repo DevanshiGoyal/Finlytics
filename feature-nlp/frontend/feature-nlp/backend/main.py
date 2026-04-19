@@ -4,13 +4,26 @@ Run with: uvicorn main:app --reload --host 0.0.0.0 --port 8000
 """
 import logging
 import os
+from pathlib import Path
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
-load_dotenv()
+
+def _load_environment() -> None:
+    """Load .env files from current and ancestor directories."""
+    this_file = Path(__file__).resolve()
+    search_dirs = [this_file.parent, *this_file.parents]
+    for directory in search_dirs:
+        for filename in (".env.local", ".env"):
+            candidate = directory / filename
+            if candidate.exists():
+                load_dotenv(dotenv_path=candidate, override=False)
+
+
+_load_environment()
 
 from nlp2sql import generate_sql_query
 from routers import upload, query, data_health_router, auto_visualize, correlation
@@ -44,6 +57,9 @@ _allowed_origins = [
     "http://localhost:5173",
     "http://localhost:3000",
     "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+    "http://localhost:3001",
 ]
 
 # Allow overriding / adding more origins via env var (comma-separated)

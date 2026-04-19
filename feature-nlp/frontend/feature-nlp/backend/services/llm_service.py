@@ -11,12 +11,25 @@ NEW:
 import os
 import re
 import json
+from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional
 
 from groq import Groq
 from dotenv import load_dotenv
 
-load_dotenv()
+
+def _load_environment() -> None:
+    """Load .env files from current and ancestor directories."""
+    this_file = Path(__file__).resolve()
+    search_dirs = [this_file.parent, *this_file.parents]
+    for directory in search_dirs:
+        for filename in (".env.local", ".env"):
+            candidate = directory / filename
+            if candidate.exists():
+                load_dotenv(dotenv_path=candidate, override=False)
+
+
+_load_environment()
 
 _client = Groq(api_key=os.environ.get("GROQ_API_KEY", ""))
 MODEL = "llama-3.3-70b-versatile"
